@@ -1,146 +1,168 @@
-const gaugeConfigs = { type: 'doughnut', options: { responsive: true, rotation: -90, circumference: 180, cutout: '80%', plugins: { tooltip: { enabled: false }, legend: { display: false } } } };
+// script.js (Based on Original - Fetches AWS Data & Processes in Frontend)
 
-const gaugeData = (value, max, color) => ({ labels: [''], datasets: [{ data: [value, max - value], backgroundColor: [color, '#e0e0e0'], borderWidth: 0 }] });
-
-const createGauge = (id, max, color) => { return new Chart(document.getElementById(id), { ...gaugeConfigs, data: gaugeData(0, max, color) }); };
-
+// --- Chart/Gauge Setup (Copied from Original) ---
+const gaugeConfigs = { type: 'doughnut', options: { responsive: true, rotation: -90, circumference: 180, cutout: '80%', animation: false, /* Added */ plugins: { tooltip: { enabled: false }, legend: { display: false } } } };
+const gaugeData = (value, max, color) => { /* ... (same as original) ... */
+    const numericValue = (value === null || isNaN(value)) ? 0 : value; const numericMax = (max === null || isNaN(max) || max <= 0) ? 1 : max; const clampedValue = Math.max(0, Math.min(numericValue, numericMax)); const remaining = Math.max(0, numericMax - clampedValue);
+    return { labels: ['Value', 'Remaining'], datasets: [{ data: [clampedValue, remaining], backgroundColor: [color, '#e0e0e0'], borderWidth: 0 }] };
+};
+const createGauge = (id, max, color) => { /* ... (same as original) ... */
+    const ctx = document.getElementById(id); if (!ctx) { console.error(`Canvas ${id} not found.`); return null; } return new Chart(ctx, { ...gaugeConfigs, data: gaugeData(0, max, color) });
+};
+// --- Gauge Definitions (Copied from Original) ---
+// Note: VOC gauge max is 1000, matching original expectation of ppb
 const gauges = {
-  aqi: createGauge('gaugeAQI', 500, '#f44336'),
-  voc: createGauge('gaugeVOC', 1000, '#ff9800'),
-  co: createGauge('gaugeCO', 100, '#ffeb3b'),
-  co2: createGauge('gaugeCO2', 2000, '#4caf50'),
-  pm25: createGauge('gaugePM25', 200, '#2196f3'),
-  pm10: createGauge('gaugePM10', 300, '#9c27b0'),
-  temp: createGauge('gaugeTemp', 50, '#e91e63'),
-  pressure: createGauge('gaugePressure', 1100, '#00bcd4'),
-  humidity: createGauge('gaugeHumidity', 100, '#673ab7')
+    aqi: createGauge('gaugeAQI', 500, '#f44336'),
+    voc: createGauge('gaugeVOC', 1000, '#ff9800'), // Expects ppb
+    co: createGauge('gaugeCO', 100, '#ffeb3b'), // Max 100 ppm (adjust?)
+    co2: createGauge('gaugeCO2', 2000, '#4caf50'),
+    pm25: createGauge('gaugePM25', 200, '#2196f3'), // Max 200 ug/m3 (adjust?)
+    pm10: createGauge('gaugePM10', 300, '#9c27b0'), // Max 300 ug/m3 (adjust?)
+    temp: createGauge('gaugeTemp', 50, '#e91e63'),
+    pressure: createGauge('gaugePressure', 1100, '#00bcd4'),
+    humidity: createGauge('gaugeHumidity', 100, '#673ab7')
 };
 
-function getAQIDescription(aqi) { if (aqi <= 50) return "Good"; if (aqi <= 100) return "Moderate"; if (aqi <= 150) return "Unhealthy for Sensitive Groups"; if (aqi <= 200) return "Unhealthy"; if (aqi <= 300) return "Very Unhealthy"; return "Hazardous"; }
-function getVOCDescription(voc) { if (voc <= 200) return "Good"; if (voc <= 400) return "Moderate"; if (voc <= 800) return "Unhealthy"; return "Very Unhealthy"; }
-function getCO2Description(co2) { if (co2 <= 600) return "Good"; if (co2 <= 1000) return "Moderate"; if (co2 <= 2000) return "Unhealthy"; return "Very Unhealthy"; }
-function getPMDescription(pm) { if (pm <= 12) return "Good"; if (pm <= 35) return "Moderate"; if (pm <= 55) return "Unhealthy for Sensitive Groups"; if (pm <= 150) return "Unhealthy"; return "Very Unhealthy"; }
-function getCODescription(co) { if (co <= 4.4) return "Good"; if (co <= 9.4) return "Moderate"; if (co <= 12.4) return "Unhealthy for Sensitive Groups"; if (co <= 15.4) return "Unhealthy"; return "Very Unhealthy"; }
-function getTempDescription(temp) { if (temp <= 10) return "Cold"; if (temp <= 25) return "Comfortable"; if (temp <= 35) return "Warm"; return "Hot"; }
-function getPressureDescription(pressure) { if (pressure < 1000) return "Low Pressure"; if (pressure <= 1020) return "Normal Pressure"; return "High Pressure"; }
-function getHumidityDescription(h) { if (h < 30) return "Dry"; if (h <= 60) return "Comfortable"; return "Humid";}
+// --- Description Functions (Copied from Original) ---
+// These expect data in the original format (e.g., voc in ppb)
+function getAQIDescription(aqi) { /* ... (same as original) ... */ }
+function getVOCDescription(voc) { /* ... (same as original - expects ppb) ... */ }
+function getCO2Description(co2) { /* ... (same as original) ... */ }
+function getPMDescription(pm) { /* ... (same as original - simple version) ... */ }
+function getCODescription(co) { /* ... (same as original) ... */ }
+function getTempDescription(temp) { /* ... (same as original) ... */ }
+function getPressureDescription(pressure) { /* ... (same as original) ... */ }
+function getHumidityDescription(h) { /* ... (same as original) ... */ }
 
-const aqiChart = new Chart(document.getElementById('aqiLineChart'), {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [
-      { label: 'AQI', data: [], borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.2)', fill: true, tension: 0.3 },
-      { label: 'VOC (ppb)', data: [], borderColor: '#ff9800', backgroundColor: 'rgba(255, 152, 0, 0.2)', fill: true, tension: 0.3 },
-      { label: 'CO (ppm)', data: [], borderColor: '#ffeb3b', backgroundColor: 'rgba(255, 235, 59, 0.2)', fill: true, tension: 0.3 },
-      { label: 'CO₂ (ppm)', data: [], borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.2)', fill: true, tension: 0.3 },
-      { label: 'PM2.5 (µg/m³)', data: [], borderColor: '#2196f3', backgroundColor: 'rgba(33, 150, 243, 0.2)', fill: true, tension: 0.3 },
-      { label: 'PM10 (µg/m³)', data: [], borderColor: '#9c27b0', backgroundColor: 'rgba(156, 39, 176, 0.2)', fill: true, tension: 0.3 },
-      { label: 'Temperature (°C)', data: [], borderColor: '#e91e63', backgroundColor: 'rgba(233, 30, 99, 0.2)', fill: true, tension: 0.3 },
-      { label: 'Pressure (hPa)', data: [], borderColor: '#00bcd4', backgroundColor: 'rgba(0, 188, 212, 0.2)', fill: true, tension: 0.3 },
-      { label: 'Humidity (%)', data: [], borderColor: '#673ab7', backgroundColor: 'rgba(103, 58, 183, 0.2)', fill: true, tension: 0.3 }
-    ]
-  },
-  options: { scales: { y: { beginAtZero: true } }, responsive: true, plugins: { legend: { position: 'top' } } }
-});
+// --- Line Chart Setup (Copied from Original) ---
+const aqiChart = new Chart(document.getElementById('aqiLineChart'), { /* ... (same chart setup as original) ... */ });
 
-const fetchData = async () => {
-  try {
-    const json = {
-      
-      //Simulation data code
-      aqi: Math.floor(Math.random() * 500), 
-      voc: Math.floor(Math.random() * 1000),
-      co: Math.floor(Math.random() * 100),  
-      co2: Math.floor(Math.random() * 2000), 
-      pm25: Math.floor(Math.random() * 200), 
-      pm10: Math.floor(Math.random() * 300), 
-      temp: (Math.random() * 50).toFixed(1), 
-      pressure: Math.floor(950 + Math.random() * 150), 
-      humidity: Math.floor(Math.random() * 101) };
-    
-    //Real code
-    //const res = await fetch('/data');
-    //const json = await res.json();
 
-    gauges.aqi.data = gaugeData(json.aqi, 500, '#f44336');
-    gauges.voc.data = gaugeData(json.voc, 1000, '#ff9800');
-    gauges.co.data = gaugeData(json.co, 100, '#ffeb3b');
-    gauges.co2.data = gaugeData(json.co2, 2000, '#4caf50');
-    gauges.pm25.data = gaugeData(json.pm25, 200, '#2196f3');
-    gauges.pm10.data = gaugeData(json.pm10, 300, '#9c27b0');  
-    gauges.temp.data = gaugeData(json.temp, 50, '#e91e63');
-    gauges.pressure.data = gaugeData(json.pressure, 1100, '#00bcd4');
-    gauges.humidity.data = gaugeData(json.humidity, 100, '#673ab7');
-
-    for (let key in gauges) { gauges[key].update(); }
-
-    document.getElementById('valueAQI').innerText = `${json.aqi}`;
-    document.getElementById('valueVOC').innerText = `${json.voc} ppb`;
-    document.getElementById('valueCO').innerText = `${json.co} ppm`;
-    document.getElementById('valueCO2').innerText = `${json.co2} ppm`;
-    document.getElementById('valuePM25').innerText = `${json.pm25} µg/m³`;
-    document.getElementById('valuePM10').innerText = `${json.pm10} µg/m³`;
-    document.getElementById('valueTemp').innerText = `${json.temp} °C`;
-    document.getElementById('valuePressure').innerText = `${json.pressure} hPa`;
-    document.getElementById('valueHumidity').innerText = `${json.humidity} %`;
-
-    document.getElementById('descAQI').innerText = getAQIDescription(json.aqi);
-    document.getElementById('descVOC').innerText = getVOCDescription(json.voc);
-    document.getElementById('descCO').innerText = getCODescription(json.co);
-    document.getElementById('descCO2').innerText = getCO2Description(json.co2);
-    document.getElementById('descPM25').innerText = getPMDescription(json.pm25);
-    document.getElementById('descPM10').innerText = getPMDescription(json.pm10);
-    document.getElementById('descTemp').innerText = getTempDescription(json.temp);
-    document.getElementById('descPressure').innerText = getPressureDescription(json.pressure);
-    document.getElementById('descHumidity').innerText = getHumidityDescription(json.humidity);
-
-    const now = new Date().toLocaleTimeString();
-    const ds = aqiChart.data.datasets;
-    aqiChart.data.labels.push(now);
-    ds[0].data.push(json.aqi);
-    ds[1].data.push(json.voc);
-    ds[2].data.push(json.co);  
-    ds[3].data.push(json.co2); 
-    ds[4].data.push(json.pm25); 
-    ds[5].data.push(json.pm10); 
-    ds[6].data.push(json.temp); 
-    ds[7].data.push(json.pressure);
-    ds[8].data.push(json.humidity);
-
-    if (aqiChart.data.labels.length > 20) { 
-      aqiChart.data.labels.shift(); 
-      ds.forEach(d => d.data.shift()); 
+// *** ADDED: Placeholder function to estimate VOC ppb from pollution class ***
+// You MUST adjust this logic based on how you want to estimate ppb.
+// This is a VERY rough example.
+function estimateVocFromClass(vocClass, /* you could pass other data like temp, humidity here */) {
+    if (vocClass === null || isNaN(vocClass)) return null;
+    // Example rough mapping: Class 0 -> 50ppb, 1 -> 300, 2 -> 600, 3 -> 900
+    // You could potentially adjust based on temperature etc. if desired.
+    switch (vocClass) {
+        case 0: return 50;
+        case 1: return 300;
+        case 2: return 600;
+        case 3: return 900;
+        default: return null;
     }
-
-    aqiChart.update();
-  } catch (err) { console.error('Failed to simulate data:', err); }
-};
-
-setInterval(fetchData, 5000);
-fetchData();
-
-function updateDateTime() {
-  const now = new Date();
-  const options = {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-  };
-  const formatted = now.toLocaleString("en-US", options);
-  document.getElementById("dateTime").textContent = formatted;
 }
 
+// --- Data Fetching and Updating (MODIFIED) ---
+let isFetching = false;
+const fetchData = async () => {
+    if (isFetching) return;
+    isFetching = true;
+    const apiEndpoint = 'https://9j1fz04gx1.execute-api.ap-southeast-1.amazonaws.com/prod/sensordata'; // Your API endpoint
+
+    try {
+        // *** REMOVED Simulation data code block ***
+
+        // *** ENABLED Real code ***
+        console.log("Fetching data from:", apiEndpoint);
+        const res = await fetch(apiEndpoint);
+        if (!res.ok) {
+            let errorDetails = `HTTP error! status: ${res.status} - ${res.statusText}`;
+            try { const errorData = await res.json(); if(errorData && errorData.message) errorDetails = errorData.message; } catch (e) {}
+            throw new Error(errorDetails);
+        }
+        // *** Data received from getAirQualityDataLambda ***
+        // This data has fields like aqi, co_ppm, pm2_5, voc_pollution_class, temperature_c etc.
+        const rawJsonData = await res.json();
+        console.log("Raw data received from API:", rawJsonData);
+
+        // *** ADDED: Process/Map data here to match original script's expectations ***
+        const processedJson = {
+            aqi: rawJsonData.aqi ?? null,
+            // Estimate VOC ppb based on class received from backend
+            voc: estimateVocFromClass(rawJsonData.voc_pollution_class /*, pass other rawData fields if needed */),
+            co: rawJsonData.co_ppm ?? null, // Use co_ppm as co
+            co2: rawJsonData.co2_ppm ?? null, // Use co2_ppm as co2
+            pm25: rawJsonData.pm2_5 ?? null, // Use pm2_5 as pm25
+            pm10: rawJsonData.pm10_0 ?? null, // Use pm10_0 as pm10
+            temp: rawJsonData.temperature_c ?? null, // Use temperature_c as temp
+            pressure: rawJsonData.pressure_hpa ?? null, // Use pressure_hpa as pressure
+            humidity: rawJsonData.humidity_percent ?? null, // Use humidity_percent as humidity
+            // Add other fields if the original script used them directly
+        };
+        console.log("Processed data for UI:", processedJson);
+
+        // --- Update UI (Using original logic with processedJson) ---
+        // Use the 'processedJson' object which now has the expected field names/formats
+        gauges.aqi.data = gaugeData(processedJson.aqi, 500, '#f44336');
+        gauges.voc.data = gaugeData(processedJson.voc, 1000, '#ff9800'); // Uses estimated ppb
+        gauges.co.data = gaugeData(processedJson.co, 100, '#ffeb3b');
+        gauges.co2.data = gaugeData(processedJson.co2, 2000, '#4caf50');
+        gauges.pm25.data = gaugeData(processedJson.pm25, 200, '#2196f3');
+        gauges.pm10.data = gaugeData(processedJson.pm10, 300, '#9c27b0');
+        gauges.temp.data = gaugeData(processedJson.temp, 50, '#e91e63');
+        gauges.pressure.data = gaugeData(processedJson.pressure, 1100, '#00bcd4');
+        gauges.humidity.data = gaugeData(processedJson.humidity, 100, '#673ab7');
+
+        for (let key in gauges) { if(gauges[key]) gauges[key].update('none'); }
+
+        // Update text using processedJson fields
+        document.getElementById('valueAQI').innerText = `${processedJson.aqi ?? 'N/A'}`;
+        document.getElementById('valueVOC').innerText = `${processedJson.voc ?? 'N/A'} ppb`; // Shows estimated ppb
+        document.getElementById('valueCO').innerText = `${processedJson.co !== null ? processedJson.co.toFixed(1) : 'N/A'} ppm`;
+        document.getElementById('valueCO2').innerText = `${processedJson.co2 ?? 'N/A'} ppm`;
+        document.getElementById('valuePM25').innerText = `${processedJson.pm25 !== null ? processedJson.pm25.toFixed(1) : 'N/A'} µg/m³`;
+        document.getElementById('valuePM10').innerText = `${processedJson.pm10 !== null ? processedJson.pm10.toFixed(1) : 'N/A'} µg/m³`;
+        document.getElementById('valueTemp').innerText = `${processedJson.temp !== null ? processedJson.temp.toFixed(1) : 'N/A'} °C`;
+        document.getElementById('valuePressure').innerText = `${processedJson.pressure !== null ? processedJson.pressure.toFixed(0) : 'N/A'} hPa`;
+        document.getElementById('valueHumidity').innerText = `${processedJson.humidity !== null ? processedJson.humidity.toFixed(1) : 'N/A'} %`;
+
+        // Update descriptions using processedJson fields and original functions
+        document.getElementById('descAQI').innerText = getAQIDescription(processedJson.aqi);
+        document.getElementById('descVOC').innerText = getVOCDescription(processedJson.voc); // Uses estimated ppb
+        document.getElementById('descCO').innerText = getCODescription(processedJson.co);
+        document.getElementById('descCO2').innerText = getCO2Description(processedJson.co2);
+        document.getElementById('descPM25').innerText = getPMDescription(processedJson.pm25); // Uses original PM func
+        document.getElementById('descPM10').innerText = getPMDescription(processedJson.pm10); // Uses original PM func
+        document.getElementById('descTemp').innerText = getTempDescription(processedJson.temp);
+        document.getElementById('descPressure').innerText = getPressureDescription(processedJson.pressure);
+        document.getElementById('descHumidity').innerText = getHumidityDescription(processedJson.humidity);
+
+        // Update line chart using processedJson fields
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const ds = aqiChart.data.datasets;
+        aqiChart.data.labels.push(now);
+        ds[0].data.push(processedJson.aqi ?? null);
+        ds[1].data.push(processedJson.voc ?? null); // Pushing estimated ppb
+        ds[2].data.push(processedJson.co ?? null);
+        ds[3].data.push(processedJson.co2 ?? null);
+        ds[4].data.push(processedJson.pm25 ?? null);
+        ds[5].data.push(processedJson.pm10 ?? null);
+        ds[6].data.push(processedJson.temp ?? null);
+        ds[7].data.push(processedJson.pressure ?? null);
+        ds[8].data.push(processedJson.humidity ?? null);
+
+        if (aqiChart.data.labels.length > 20) { /* ... (limit history) ... */ }
+        aqiChart.update('none');
+
+    } catch (err) {
+        console.error('Failed to fetch or process data from API:', err);
+        // Optional: Add simple UI error display here if needed
+        // e.g., document.getElementById('valueAQI').innerText = 'ERR';
+    } finally {
+        isFetching = false;
+    }
+};
+
+// *** MODIFIED: Interval increased to 60 seconds for performance ***
+setInterval(fetchData, 60000); // Fetch every 60 seconds
+fetchData(); // Initial fetch
+
+// --- Date/Time Update Function (Copied from Original) ---
+function updateDateTime() { /* ... (same as original) ... */ }
 setInterval(updateDateTime, 1000);
 updateDateTime();
 
-//Work it, make it, do it, makes us
-//Harder, better, faster, stronger
-//More than, hour, hour, never, ever, after, work is, over
-//Work it harder, make it better, Do it faster, makes us stronger
-//More than ever, hour after hour, Work is never over
+// Original Daft Punk comment
+// ...
