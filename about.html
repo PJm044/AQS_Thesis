@@ -1,88 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="images/uls.png" />
-    <link rel="stylesheet" href="style.css" />
-    <title>About - Air Quality Monitoring</title>
-</head>
+    <head>
+        <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <link rel= "icon" href = "images/uls.png"> <link rel= "stylesheet" href = "style.css"> <title> Air Quality Index </title> </head>
 
-<body>
+    <body>
+        
+        <nav>
+            <div class = "titlecontainer">
+                <img class= "logo" src="images/uls.png" alt="University of La Salette College Logo"/> <h2 class="maintitle"> University of La Salette College, Inc. </h2> </div>
 
-    <nav>
-        <div class="titlecontainer">
-            <img class="logo" src="images/uls.png" alt="University of La Salette College Logo" />
-            <h2 class="maintitle"> University of La Salette College, Inc. </h2>
-        </div>
-        <div class="linkcontainer">
-            <a class="link" href="index.html">Home</a>
-            <a class="link" href="02 About.html">About</a>
-        </div>
-        <div class="sliding-text-container">
-            <p class="sliding-text footer-text">
-                Air Quality Monitoring System in Santiago City | By: Jingle L. Chiniona, Paul Jasper A. Malate, Pearl Myris P. Lamigo, and Pierre Martin G. Chan | In Partial Fulfillment of the Requirements for the Degree Bachelor of Science in Computer Engineering
-            </p>
-        </div>
-    </nav>
-
-    <main class="container">
-        <div class="py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-
-            <div class="card">
-                <h1 class="primary-heading">Air Quality Monitoring System</h1>
-                <p class="text-description">
-                    An air quality monitoring system developed for the ULS Caloocan Campus Area, crucial for understanding and addressing local air pollution. This system employs various sensors to measure key pollutants and environmental factors, providing real-time data to assess air quality.
+            <div class= "linkcontainer">
+                <a class = "link" href = "index.html"> Home </a>
+                <a class = "link" href = "02 About.html"> About </a>
+            </div>
+            <div class="sliding-text-container">
+                <p class="sliding-text footer-text">
+                    Air Quality Monitoring System in Santiago City | By: Jingle L. Chiniona, Paul Jasper A. Malate, Pearl Myris P. Lamigo, and Pierre Martin G. Chan | In Partial Fulfillment of the Requirements for the Degree Bachelor of Science in Computer Engineering
                 </p>
-                <p class="text-description">
-                    The system helps in:
-                </p>
-                <ul class="list-item"> <li>Monitoring current pollution levels.</li>
-                    <li>Identifying trends in air quality over time.</li>
-                    <li>Raising awareness about local air quality conditions.</li>
-                    <li>Providing data for assessing potential health risks.</li>
-                    <li>Evaluating the effectiveness of potential mitigation strategies.</li>
-                </ul>
             </div>
 
-            <div class="card">
-                <h2 class="secondary-heading">Sensor Information</h2>
-                <div class="sensor-info">
+        </nav>
 
-                    <div class="sensor-item">
-                        <h3 class="sensor-title">Particulate Matter (PMSA003)</h3>
-                        <p class="text-description">Measures PM1.0, PM2.5 (fine particles), and PM10 (coarse particles), which are major components of haze and significant health concerns.</p>
-                    </div>
+        <content>
+            
+            <div class="aqi-panel">
+                <div class="aqi-header">
+                    <p class="date-time" id="dateTime">Loading...</p> <h2>Santiago City, Isabela</h2> </div>
+                
+                <div class="gauge">
+                    <canvas id="gaugeAQI"></canvas> <p>Air Quality Index</p> <div id="valueAQI" class="gauge-value">0</div> <div id="descAQI" class="gauge-description">Unknown</div> </div> 
+                
+            </div>
 
-                    <div class="sensor-item">
-                        <h3 class="sensor-title">Carbon Monoxide (MQ7 Module)</h3>
-                        <p class="text-description">Detects Carbon Monoxide (CO), a toxic gas often resulting from incomplete combustion.</p>
-                    </div>
-
-                    <div class="sensor-item">
-                        <h3 class="sensor-title">Air Quality Level (ZP07-MP503 Module)</h3>
-                        <p class="text-description">Provides a general indication of air quality based on combined sensitivity to various volatile organic compounds (VOCs) and other gases, reported as a pollution level (0-3).</p>
-                    </div>
-
-                     <div class="sensor-item">
-                        <h3 class="sensor-title">Carbon Dioxide (MH-Z19C)</h3>
-                        <p class="text-description">Measures Carbon Dioxide (CO₂) levels, often used as an indicator of indoor air quality and ventilation effectiveness.</p>
-                    </div>
-
-                    <div class="sensor-item">
-                        <h3 class="sensor-title">Temperature & Humidity (AHT20)</h3>
-                        <p class="text-description">Monitors ambient air temperature and relative humidity, factors which can influence comfort and pollutant behavior.</p>
-                    </div>
-
-                    <div class="sensor-item">
-                        <h3 class="sensor-title">Barometric Pressure (BMP280)</h3>
-                        <p class="text-description">Measures atmospheric pressure, which is related to weather patterns.</p>
-                    </div>
-
+            <div class="gauge-container" id="gauges">
+                <div class="gauge">
+                    <canvas id="gaugeVOC"></canvas>
+                    <p>VOC (ppb)</p>
+                    <div id="valueVOC" class="gauge-value">0</div>
+                    <div id="descVOC" class="gauge-description">Unknown</div>
                 </div>
-            </div>
+                <div class="gauge">
+                    <canvas id="gaugeCO"></canvas>
+                    <p>CO (ppm)</p>
+                    <div id="valueCO" class="gauge-value">0</div>
+                    <div id="descCO" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugeCO2"></canvas>
+                    <p>CO₂ (ppm)</p>
+                    <div id="valueCO2" class="gauge-value">0</div>
+                    <div id="descCO2" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugePM25"></canvas>
+                    <p>PM2.5 (µg/m³)</p>
+                    <div id="valuePM25" class="gauge-value">0</div>
+                    <div id="descPM25" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugePM10"></canvas>
+                    <p>PM10 (µg/m³)</p>
+                    <div id="valuePM10" class="gauge-value">0</div>
+                    <div id="descPM10" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugeTemp"></canvas>
+                    <p>Temperature (°C)</p>
+                    <div id="valueTemp" class="gauge-value">0</div>
+                    <div id="descTemp" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugePressure"></canvas>
+                    <p>Pressure (hPa)</p>
+                    <div id="valuePressure" class="gauge-value">0</div>
+                    <div id="descPressure" class="gauge-description">Unknown</div>
+                </div>
+                <div class="gauge">
+                    <canvas id="gaugeHumidity"></canvas>
+                    <p>Humidity (%)</p>
+                    <div id="valueHumidity" class="gauge-value">0</div>
+                    <div id="descHumidity" class="gauge-description">Unknown</div>
+                </div>
+                </div>
 
-        </div> </main> </body>
+            <canvas id="aqiLineChart" height="100"></canvas> 
+        </content>
+    </body>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
 
 </html>
