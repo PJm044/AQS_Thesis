@@ -137,7 +137,7 @@ const fetchData = async () => {
 };
 
 // *** MODIFIED: Interval increased to 60 seconds (60000 ms) for performance ***
-setInterval(fetchData, 60000);
+setInterval(fetchData, 3000);
 fetchData(); // Initial fetch
 
 // --- Date/Time Update Function (Copied from Original) ---
