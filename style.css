@@ -1,159 +1,104 @@
+/* style.css (Full Code - Attempt 4 at Layout Fixes) */
+
 /* =================================
    Base & Body Styles
    ================================= */
-body {
+html, body {
+  height: 100%; /* Ensure html and body can be height references */
   margin: 0;
+  padding: 0;
+}
+
+body {
   background: #113163 url(images/smog.jpg) center center / cover fixed no-repeat;
-  font-family: 'Inter', sans-serif, Arial, sans-serif; /* Added fallbacks */
-  color: #333; /* Default text color for elements */
+  font-family: 'Inter', sans-serif, Arial, sans-serif;
+  color: #333;
+  display: flex; /* Use flexbox for overall layout */
+  flex-direction: column; /* Stack nav and content vertically */
+  min-height: 100%; /* Ensure body takes at least full viewport height */
+}
+
+/* Box sizing reset */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 /* =================================
    Navigation Bar
    ================================= */
 nav {
-  background-color: rgba(17, 49, 99, 0.95); /* Slightly more opaque */
+  background-color: rgba(17, 49, 99, 0.95);
   padding: 10px 25px;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
-  position: sticky; /* Stick to top */
-  top: 0;
-  z-index: 100; /* Ensure nav is above other content */
+  flex-wrap: wrap;
+  /* Removed position: sticky; as it can complicate height calculations */
+  /* If you need sticky, ensure body/html height allows it */
+   flex-shrink: 0; /* Prevent nav from shrinking */
+   z-index: 100;
 }
-
-.titlecontainer {
-  display: flex;
-  align-items: center;
-  margin-right: auto; /* Push links to the right */
-}
-
-.logo {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  margin-right: 15px;
-  border: 1px solid #ddd; /* Optional: subtle border */
-  background-color: #fff; /* Ensure logo background is visible */
-}
-
-.maintitle {
-  display: inline-block;
-  margin: 0;
-  color: #ffffff;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  font-size: 1.2em;
-  font-weight: bold; /* Added */
-}
-
-.linkcontainer {
-  display: flex;
-  align-items: center;
-}
-
-.link {
-  color: #ffffff;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  margin: 0 15px;
-  text-decoration: none;
-  transition: color 0.3s ease;
-  padding: 5px 0; /* Add padding for easier clicking */
-}
-
-.link:hover,
-.link:focus { /* Added focus style */
-  color: #ffd700;
-  outline: none; /* Remove default focus outline if needed */
-}
+/* ... other nav styles remain the same (.titlecontainer, .logo, .maintitle, etc.) ... */
+.titlecontainer { display: flex; align-items: center; margin-right: auto; }
+.logo { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; border: 1px solid #ddd; background-color: #fff; }
+.maintitle { display: inline-block; margin: 0; color: #ffffff; font-family: Verdana, Geneva, Tahoma, sans-serif; font-size: 1.2em; font-weight: bold; }
+.linkcontainer { display: flex; align-items: center; }
+.link { color: #ffffff; font-family: Verdana, Geneva, Tahoma, sans-serif; margin: 0 15px; text-decoration: none; transition: color 0.3s ease; padding: 5px 0; }
+.link:hover, .link:focus { color: #ffd700; outline: none; }
 
 /* =================================
    Sliding Footer Text
    ================================= */
 .sliding-text-container {
-  background-color: rgba(0, 0, 0, 0.4); /* Darker background */
+  background-color: rgba(0, 0, 0, 0.4);
   padding: 0.5rem 0;
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
   box-sizing: border-box;
-  margin-top: 10px; /* Only if nav wraps */
-  flex-basis: 100%; /* Ensure full width if nav wraps */
+  margin-top: 10px;
+  flex-basis: 100%;
+  flex-shrink: 0; /* Prevent shrinking */
 }
+.sliding-text { display: inline-block; padding-left: 100%; animation: slide 30s linear infinite; color: white; font-size: 0.8em; font-style: italic; }
+@keyframes slide { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
 
-.sliding-text {
-  display: inline-block;
-  padding-left: 100%;
-  animation: slide 30s linear infinite; /* Consider increasing duration if text is long */
-  color: white;
-  font-size: 0.8em;
-  font-style: italic;
-}
-
-@keyframes slide {
-  0% { transform: translateX(0%); }
-  100% { transform: translateX(-100%); }
-}
 
 /* =================================
    Main Content Area
    ================================= */
+/* MODIFIED: Added flex-grow and overflow */
 content {
   display: block;
-  padding: 20px; /* Padding around content */
+  padding: 20px;
   box-sizing: border-box;
+  flex-grow: 1; /* Allow content to take remaining vertical space */
+  overflow-y: auto; /* Make content area scrollable if its content overflows */
+  /* ADDED: Explicitly prevent negative margins from collapsing */
+  overflow-x: hidden; /* Prevent horizontal scrollbars */
+  /* Optional: Set a max-height based on viewport if needed */
+  /* max-height: calc(100vh - 150px); */ /* Adjust 150px based on nav/footer heights */
 }
 
 /* =================================
    AQI Panel (Top Section)
    ================================= */
 .aqi-panel {
-  background-color: rgba(17, 49, 99, 0.85); /* Slightly more opaque */
+  background-color: rgba(17, 49, 99, 0.85);
   border-radius: 16px;
   padding: 20px 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0 0 20px 0; /* Margin only at bottom */
+  margin: 0 0 20px 0;
   flex-wrap: wrap;
-  gap: 20px; /* Gap between header and gauge if wrapped */
+  gap: 20px;
 }
-
-.aqi-header {
-  color: #ffffff;
-  flex-grow: 1; /* Allow header to take available space */
-  min-width: 250px;
-}
-
-.aqi-header h2 {
-  margin: 5px 0 10px 0;
-  font-size: 1.8em;
-}
-
-.date-time {
-  color: #dddddd;
-  font-size: 0.9em;
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  margin: 0 0 5px 0;
-}
-
-/* Main AQI gauge within the panel */
-.aqi-panel .gauge {
-   background: transparent;
-   box-shadow: none;
-   height: auto; /* Let content determine size */
-   width: 180px; /* Fixed width for main gauge */
-   padding: 0;
-   margin: 0; /* Remove extra margin */
-   flex-shrink: 0;
-   /* Apply flex centering from general .gauge style */
-   display: flex;
-   flex-direction: column;
-   justify-content: center;
-   align-items: center;
-   position: relative;
-}
-/* Specific text styling for main AQI panel */
+/* ... other .aqi-panel styles remain the same ... */
+.aqi-header { color: #ffffff; flex-grow: 1; min-width: 250px; }
+.aqi-header h2 { margin: 5px 0 10px 0; font-size: 1.8em; }
+.date-time { color: #dddddd; font-size: 0.9em; font-family: Verdana, Geneva, Tahoma, sans-serif; margin: 0 0 5px 0; }
+.aqi-panel .gauge { background: transparent; box-shadow: none; height: auto; width: 180px; padding: 0; margin: 0; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
 .aqi-panel .gauge p { color: #fff; margin-top: 5px; font-size: 1em; }
 .aqi-panel .gauge .gauge-value { color: #fff; font-size: 1.8em; margin-top: -60px; }
 .aqi-panel .gauge .gauge-description { color: #fff; font-size: 1em; margin-top: 5px; }
@@ -163,59 +108,62 @@ content {
 /* =================================
    Sensor Gauges Section
    ================================= */
+/* MODIFIED: Re-added max-height and overflow */
 .gauge-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 20px;
-  margin: 0 0 20px 0; /* Consistent margin */
-  padding: 0; /* Remove container padding if gauges have it */
+  margin: 0 0 20px 0;
+  padding: 0; /* Remove padding if .gauge has padding */
+  /* ADDED: Try constraining the grid container */
+   max-height: 60vh; /* Example: max 60% of viewport height */
+   overflow-y: auto; /* Add scroll WITHIN this container if gauges exceed max-height */
 }
 
-/* MODIFIED: Removed fixed height, using padding for spacing */
+/* MODIFIED: Ensure box-sizing, check padding */
 .gauge {
   background: #ffffff;
   border-radius: 16px;
-  padding: 15px 10px; /* Padding creates internal space */
+  padding: 10px; /* Reduced padding slightly */
   text-align: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  /* Removed fixed height */
-  /* Removed display: flex (let content flow block) */
-  position: relative; /* Keep for context if needed later */
+  position: relative;
+  /* Removed fixed height - let content size it */
+  /* Removed display: flex */
+  overflow: hidden; /* Hide potential overflow */
 }
 
-/* MODIFIED: Canvas size within gauge */
+/* MODIFIED: Set specific height for canvas */
 .gauge canvas {
    background: transparent;
    max-width: 90%;
-   height: 100px; /* Give canvas a fixed height for the semi-circle */
-   margin: 0 auto 5px auto;
+   height: 90px; /* Smaller fixed height for gauge semi-circle */
+   margin: 0 auto; /* Center canvas */
    padding: 0;
    box-shadow: none;
    border-radius: 0;
    display: block;
 }
 
-/* MODIFIED: Text flows naturally below canvas */
-.gauge p { /* Label (e.g., "AQI", "Air Quality Level") */
+/* Ensure text flows below canvas */
+.gauge p {
     margin: 5px 0 2px 0;
     font-size: 0.85em;
     color: #333;
     font-weight: bold;
     line-height: 1.2;
 }
-
 .gauge-value {
   font-size: 1.1em;
   font-weight: bold;
   color: #333;
-  margin: 0 0 2px 0; /* Reset margins */
+  margin: 0 0 2px 0;
   line-height: 1.1;
 }
-
 .gauge-description {
   font-size: 0.8em;
   color: #555555;
-  margin: 0; /* Reset margin */
+  margin: 0;
   line-height: 1.1;
 }
 
@@ -223,109 +171,48 @@ content {
 /* =================================
    Line Chart Section
    ================================= */
-
-/* MODIFIED: General canvas style - very minimal */
+/* MODIFIED: General canvas reset */
 canvas {
   max-width: 100%;
-  display: block; /* Important */
+  display: block;
+  background: none; /* Remove default background */
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* MODIFIED: Specific style for the line chart */
 #aqiLineChart {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    margin: 20px 0 0 0; /* Margin top only */
+    background: #ffffff; /* Apply background here */
+    border-radius: 16px; /* Apply radius here */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* Apply shadow here */
+    margin: 20px 0 0 0;
     padding: 15px;
     box-sizing: border-box;
-    width: 100%; /* Take full width of container */
-    /* ADDED: Explicit height constraint */
-    height: 350px; /* Adjust as needed */
-    max-height: 45vh; /* Limit height relative to viewport */
+    width: 100%;
+    height: 350px; /* Fixed height */
+    max-height: 45vh; /* Max relative height */
+    overflow: hidden; /* Hide potential overflow */
 }
-
 
 /* =================================
-   About Page Styles (Copied)
+   About Page Styles (Unchanged from last version)
    ================================= */
-
-/* Styles specific to 02 About.html */
-main { /* Assuming About page uses main tag */
-    padding: 20px;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.container {
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
+main { padding: 20px; background-color: rgba(255, 255, 255, 0.1); }
+.container { max-width: 1200px; margin-left: auto; margin-right: auto; }
 .grid { display: grid; }
 .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-@media (min-width: 768px) {
-    .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+@media (min-width: 768px) { .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .gap-8 { gap: 2rem; }
 .px-4 { padding-left: 1rem; padding-right: 1rem; }
 .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-
-.primary-heading {
-  color: navy;
-  font-size: 2.5rem;
-  font-weight: 900;
-  margin-bottom: 1.5rem;
-  text-shadow: 0 0 8px rgba(37, 99, 235, 0.7);
-  animation: glow 2s ease-in-out infinite alternate;
-}
-
-@keyframes glow {
-  from { text-shadow: 0 0 8px rgba(37, 99, 235, 0.7); }
-  to { text-shadow: 0 0 15px rgba(37, 99, 235, 0.9); }
-}
-
-.text-description,
-.list-item {
-  color: black;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.list-item {
-  margin-bottom: 0.5rem;
-  margin-left: 1.25rem;
-  list-style-type: disc;
-}
-
-.card {
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  padding: 2rem;
-}
-
-.secondary-heading {
-  color: navy;
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.sensor-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.sensor-item {
-  background-color: rgba(255, 255, 255, 0.8);
-  padding: 1.25rem;
-  border-radius: 0.5rem;
-}
-
-.sensor-title {
-  color: navy;
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
+.primary-heading { color: navy; font-size: 2.5rem; font-weight: 900; margin-bottom: 1.5rem; text-shadow: 0 0 8px rgba(37, 99, 235, 0.7); animation: glow 2s ease-in-out infinite alternate; }
+@keyframes glow { from { text-shadow: 0 0 8px rgba(37, 99, 235, 0.7); } to { text-shadow: 0 0 15px rgba(37, 99, 235, 0.9); } }
+.text-description, .list-item { color: black; font-size: 1rem; line-height: 1.6; }
+.list-item { margin-bottom: 0.5rem; margin-left: 1.25rem; list-style-type: disc; }
+.card { background-color: rgba(255, 255, 255, 0.7); border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); padding: 2rem; }
+.secondary-heading { color: navy; font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; }
+.sensor-info { display: flex; flex-direction: column; gap: 1.5rem; }
+.sensor-item { background-color: rgba(255, 255, 255, 0.8); padding: 1.25rem; border-radius: 0.5rem; }
+.sensor-title { color: navy; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; }
