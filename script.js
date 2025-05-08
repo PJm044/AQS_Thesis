@@ -1,9 +1,7 @@
-// script.js (Interval set to 4 seconds - PERFORMANCE WARNING)
+// script.js (Revised - Interval 60s, Handles AQI & VOC Class)
 
-// --- Chart.js Global Settings (Optional performance tweak) ---
-// Chart.defaults.animation = false;
-// Chart.defaults.animations.colors = false;
-// Chart.defaults.animations.x = false;
+// --- Chart.js Global Settings ---
+// Chart.defaults.animation = false; // Optional: uncomment to disable all animations globally
 
 // Configuration for all gauges (doughnut chart type)
 const gaugeConfigs = {
@@ -14,9 +12,9 @@ const gaugeConfigs = {
         rotation: -90,
         circumference: 180,
         cutout: '80%',
-        animation: false, // Explicitly disable animation
+        animation: false, // Explicitly disable animation here too
         plugins: {
-            tooltip: { enabled: false },
+            tooltip: { enabled: false }, // Tooltips off for gauges
             legend: { display: false }
         }
     }
@@ -25,7 +23,7 @@ const gaugeConfigs = {
 // Function to create the data object for a gauge
 const gaugeData = (value, max, color) => {
     const numericValue = (value === null || isNaN(value)) ? 0 : value;
-    const numericMax = (max === null || isNaN(max) || max <= 0) ? 1 : max;
+    const numericMax = (max === null || isNaN(max) || max <= 0) ? 1 : max; // Ensure max is valid positive
     const clampedValue = Math.max(0, Math.min(numericValue, numericMax));
     const remaining = Math.max(0, numericMax - clampedValue);
     return {
@@ -38,7 +36,7 @@ const gaugeData = (value, max, color) => {
     };
 };
 
-// Function to create a new gauge chart
+// Function to create a new gauge chart instance
 const createGauge = (canvasId, max, color) => {
     const ctx = document.getElementById(canvasId);
     if (!ctx) {
@@ -46,26 +44,26 @@ const createGauge = (canvasId, max, color) => {
         return null;
     }
     return new Chart(ctx, {
-        ...gaugeConfigs,
+        ...gaugeConfigs, // Use shared configs (includes animation: false)
         data: gaugeData(0, max, color)
     });
 };
 
-// --- Gauge Definitions ---
+// --- Gauge Definitions / Instances ---
 const gauges = {
     aqi: createGauge('gaugeAQI', 500, '#6fcf97'),
-    voc: createGauge('gaugeVOC', 3, '#f2994a'),
-    co: createGauge('gaugeCO', 50, '#f2c94c'),
-    co2: createGauge('gaugeCO2', 2000, '#56ccf2'),
-    pm25: createGauge('gaugePM25', 250, '#bb6bd9'),
-    pm10: createGauge('gaugePM10', 425, '#eb5757'),
-    temp: createGauge('gaugeTemp', 50, '#e91e63'),
-    pressure: createGauge('gaugePressure', 1100, '#00bcd4'),
-    humidity: createGauge('gaugeHumidity', 100, '#2f80ed')
+    voc: createGauge('gaugeVOC', 3, '#f2994a'),     // Max = 3 for VOC Class 0-3
+    co: createGauge('gaugeCO', 50, '#f2c94c'),      // Max 50ppm (Adjust if needed)
+    co2: createGauge('gaugeCO2', 2000, '#56ccf2'),   // Max 2000ppm
+    pm25: createGauge('gaugePM25', 250, '#bb6bd9'),  // Max 250 ug/m3
+    pm10: createGauge('gaugePM10', 425, '#eb5757'),  // Max 425 ug/m3
+    temp: createGauge('gaugeTemp', 50, '#e91e63'),    // Max 50 C
+    pressure: createGauge('gaugePressure', 1100, '#00bcd4'), // Max 1100 hPa
+    humidity: createGauge('gaugeHumidity', 100, '#2f80ed')  // Max 100 %
 };
 
 
-// --- Description Functions ---
+// --- Description Functions --- (Ensure these correctly handle null/NaN inputs)
 function getAQIDescription(aqi) {
     if (aqi === null || isNaN(aqi)) return "N/A";
     if (aqi <= 50) return "Good";
@@ -75,7 +73,7 @@ function getAQIDescription(aqi) {
     if (aqi <= 300) return "Very Unhealthy";
     return "Hazardous";
 }
-function getAirQualityLevelDescription(level) {
+function getAirQualityLevelDescription(level) { // For VOC Class
     if (level === null || isNaN(level)) return "N/A";
     switch (level) {
         case 0: return "Clean Air";
@@ -152,7 +150,7 @@ if (lineChartCanvas) {
         type: 'line',
         data: {
             labels: [],
-            datasets: [
+            datasets: [ // Make sure indexes match update logic below
                 { label: 'AQI', data: [], borderColor: '#6fcf97', backgroundColor: 'rgba(111, 207, 151, 0.2)', fill: true, tension: 0.3, hidden: false }, // 0
                 { label: 'CO (ppm)', data: [], borderColor: '#f2c94c', backgroundColor: 'rgba(242, 201, 76, 0.2)', fill: true, tension: 0.3, hidden: true },  // 1
                 { label: 'CO₂ (ppm)', data: [], borderColor: '#56ccf2', backgroundColor: 'rgba(86, 204, 242, 0.2)', fill: true, tension: 0.3, hidden: true }, // 2
@@ -170,12 +168,12 @@ if (lineChartCanvas) {
             },
             responsive: true,
             maintainAspectRatio: false,
-            animation: false,
+            animation: false, // Disable animations
             plugins: {
                 legend: { position: 'top', labels: { color: '#CCC' },
-                    onClick: (e, legendItem, legend) => { Chart.defaults.plugins.legend.onClick(e, legendItem, legend); }
+                    onClick: (e, legendItem, legend) => { Chart.defaults.plugins.legend.onClick(e, legendItem, legend); } // Default toggle behavior
                 },
-                tooltip: { enabled: true, mode: 'index', intersect: false },
+                tooltip: { enabled: true, mode: 'index', intersect: false }, // Keep tooltips unless lagging
             }
         }
     });
@@ -185,7 +183,7 @@ if (lineChartCanvas) {
 
 
 // --- Data Fetching and Updating ---
-let isFetching = false; 
+let isFetching = false; // Prevent overlapping fetches
 
 const fetchData = async () => {
     if (isFetching) {
@@ -203,35 +201,37 @@ const fetchData = async () => {
             throw new Error(errorDetails);
         }
         const jsonData = await res.json();
-        
+        console.log("Data received, updating UI:", jsonData); // Good for debugging
+
         // --- Update Gauges ---
         const updateGauge = (gaugeKey, value, max, color) => {
             if (gauges[gaugeKey]) {
                 gauges[gaugeKey].data = gaugeData(value, max, color);
-                gauges[gaugeKey].update('none'); 
+                gauges[gaugeKey].update('none'); // Update without animation
             }
         };
         updateGauge('aqi', jsonData.aqi, 500, '#6fcf97');
-        updateGauge('voc', jsonData.vocClass, 3, '#f2994a');
-        updateGauge('co', jsonData.co, 50, '#f2c94c');
-        updateGauge('co2', jsonData.co2, 2000, '#56ccf2');
-        updateGauge('pm25', jsonData.pm25, 250, '#bb6bd9');
-        updateGauge('pm10', jsonData.pm10, 425, '#eb5757');
-        updateGauge('temp', jsonData.temp, 50, '#e91e63');
-        updateGauge('pressure', jsonData.pressure, 1100, '#00bcd4');
-        updateGauge('humidity', jsonData.humidity, 100, '#2f80ed');
+        updateGauge('voc', jsonData.vocClass, 3, '#f2994a'); // Use vocClass (0-3)
+        updateGauge('co', jsonData.co, 50, '#f2c94c'); 
+        updateGauge('co2', jsonData.co2, 2000, '#56ccf2'); 
+        updateGauge('pm25', jsonData.pm25, 250, '#bb6bd9'); 
+        updateGauge('pm10', jsonData.pm10, 425, '#eb5757'); 
+        updateGauge('temp', jsonData.temp, 50, '#e91e63'); 
+        updateGauge('pressure', jsonData.pressure, 1100, '#00bcd4'); 
+        updateGauge('humidity', jsonData.humidity, 100, '#2f80ed'); 
 
         // --- Update Text Displays ---
         const updateText = (elementId, text) => {
             const element = document.getElementById(elementId);
             if (element) {
-                 window.requestAnimationFrame(() => { // Use rAF for text updates
+                 // Use rAF for potentially smoother updates
+                 window.requestAnimationFrame(() => { 
                      element.innerText = (text === null || text === undefined) ? 'N/A' : text;
                  });
             }
         };
-        updateText('valueAQI', jsonData.aqi);
-        updateText('valueVOC', `Level: ${jsonData.vocClass !== null ? jsonData.vocClass : 'N/A'}`);
+        updateText('valueAQI', jsonData.aqi !== null ? jsonData.aqi : 'N/A'); // Show N/A if null
+        updateText('valueVOC', `Level: ${jsonData.vocClass !== null ? jsonData.vocClass : 'N/A'}`); // Use vocClass
         updateText('valueCO', `${jsonData.co !== null ? jsonData.co.toFixed(1) : 'N/A'} ppm`);
         updateText('valueCO2', `${jsonData.co2 !== null ? jsonData.co2 : 'N/A'} ppm`);
         updateText('valuePM25', `${jsonData.pm25 !== null ? jsonData.pm25.toFixed(1) : 'N/A'} µg/m³`);
@@ -242,7 +242,7 @@ const fetchData = async () => {
 
         // --- Update Descriptions ---
         updateText('descAQI', getAQIDescription(jsonData.aqi));
-        updateText('descVOC', getAirQualityLevelDescription(jsonData.vocClass));
+        updateText('descVOC', getAirQualityLevelDescription(jsonData.vocClass)); // Use vocClass
         updateText('descCO', getCODescription(jsonData.co));
         updateText('descCO2', getCO2Description(jsonData.co2));
         updateText('descPM25', getPMDescription(jsonData.pm25, "pm25"));
@@ -258,23 +258,24 @@ const fetchData = async () => {
             const datasets = aqiLineChart.data.datasets;
 
             labels.push(now);
-            datasets[0].data.push(jsonData.aqi);       
-            datasets[1].data.push(jsonData.co);        
-            datasets[2].data.push(jsonData.co2);       
-            datasets[3].data.push(jsonData.pm25);      
-            datasets[4].data.push(jsonData.pm10);      
-            datasets[5].data.push(jsonData.temp);      
-            datasets[6].data.push(jsonData.pressure);  
-            datasets[7].data.push(jsonData.humidity);  
+            // Push data, use null if value is null/undefined from JSON
+            datasets[0].data.push(jsonData.aqi ?? null);       
+            datasets[1].data.push(jsonData.co ?? null);        
+            datasets[2].data.push(jsonData.co2 ?? null);       
+            datasets[3].data.push(jsonData.pm25 ?? null);      
+            datasets[4].data.push(jsonData.pm10 ?? null);      
+            datasets[5].data.push(jsonData.temp ?? null);      
+            datasets[6].data.push(jsonData.pressure ?? null);  
+            datasets[7].data.push(jsonData.humidity ?? null);  
 
-            const maxDataPoints = 30; 
+            const maxDataPoints = 30; // Keep history reasonable
             while (labels.length > maxDataPoints) {
                 labels.shift();
                 datasets.forEach(dataset => {
                     if(dataset.data.length > 0) dataset.data.shift();
                 });
             }
-            // Use requestAnimationFrame for chart update too for smoother rendering
+            // Use rAF for chart update
             window.requestAnimationFrame(() => {
                  aqiLineChart.update('none'); 
             });
@@ -297,24 +298,28 @@ const fetchData = async () => {
 };
 
 // --- Date/Time Update Function --- 
+// Ensure this element exists in index.html with id="dateTime"
 function updateDateTime() {
     const now = new Date();
     const options = { 
         weekday: "long", year: "numeric", month: "long", day: "numeric", 
         hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
-        timeZone: "Asia/Manila" // Timezone for Caloocan/Metro Manila
+        timeZone: "Asia/Manila" // Timezone for Philippines
     };
     const dateTimeElement = document.getElementById("dateTime");
     if (dateTimeElement) {
         try {
-            // Use requestAnimationFrame for smoother clock update (though likely overkill)
+             // Use rAF for smoother clock update (optional)
              window.requestAnimationFrame(() => {
-                dateTimeElement.textContent = now.toLocaleString("en-US", options);
+                 dateTimeElement.textContent = now.toLocaleString("en-US", options);
              });
         } catch (e) { 
-             dateTimeElement.textContent = now.toLocaleString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' }); // Basic fallback
+             // Basic fallback if timezone formatting fails
+             dateTimeElement.textContent = now.toLocaleString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' }); 
              console.error("Error formatting date with timezone:", e);
         }
+    } else {
+         // console.warn("dateTime element not found"); // Optional warning
     }
 }
 
@@ -323,11 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM Loaded. Initializing data fetch and timers.");
     fetchData(); // Initial data fetch
 
-    // *** MODIFIED: Interval set to 4 seconds (4000 ms) as requested ***
-    // *** WARNING: This is likely to cause performance issues / lagging! ***
-    // *** Recommend changing back to 60000 (60 seconds) or more if lag occurs. ***
-    setInterval(fetchData, 4000); 
+    // *** Fetch interval set to 60 seconds (60000 ms) to reduce lag ***
+    // *** Increase if still lagging: 120000 (2 min), 300000 (5 min) ***
+    setInterval(fetchData, 60000); 
 
-    updateDateTime(); // Initial date-time update
-    setInterval(updateDateTime, 1000); // Update clock every second
+    updateDateTime(); // Initial clock update
+    setInterval(updateDateTime, 1000); // Update clock every second (generally fine)
 });
