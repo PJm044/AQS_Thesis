@@ -1,243 +1,146 @@
-// script.js
+const gaugeConfigs = { type: 'doughnut', options: { responsive: true, rotation: -90, circumference: 180, cutout: '80%', plugins: { tooltip: { enabled: false }, legend: { display: false } } } };
 
-// The Invoke URL for your GET method on the /data resource from API Gateway
-const API_ENDPOINT = 'https://YOUR_API_GATEWAY_INVOKE_URL/YOUR_STAGE/data'; // Replace with your actual URL!
+const gaugeData = (value, max, color) => ({ labels: [''], datasets: [{ data: [value, max - value], backgroundColor: [color, '#e0e0e0'], borderWidth: 0 }] });
 
-// Chart.js instances (to be initialized later)
-let aqiGaugeChart, vocGaugeChart, coGaugeChart, co2GaugeChart, pm25GaugeChart, pm10GaugeChart, tempGaugeChart, pressureGaugeChart, humidityGaugeChart;
-let aqiLineChartInstance;
+const createGauge = (id, max, color) => { return new Chart(document.getElementById(id), { ...gaugeConfigs, data: gaugeData(0, max, color) }); };
 
-// Helper function to get description and color for AQI
-function getAQIDetails(aqi) {
-    if (aqi === null || aqi === undefined) return { description: "Unknown", color: "#cccccc" };
-    if (aqi <= 50) return { description: "Good", color: "#00e400" };
-    if (aqi <= 100) return { description: "Moderate", color: "#ffff00" };
-    if (aqi <= 150) return { description: "Unhealthy for Sensitive Groups", color: "#ff7e00" };
-    if (aqi <= 200) return { description: "Unhealthy", color: "#ff0000" };
-    if (aqi <= 300) return { description: "Very Unhealthy", color: "#8f3f97" };
-    return { description: "Hazardous", color: "#7e0023" };
-}
-
-// Helper function for VOC description (based on vocClass)
-function getVOCDetails(vocClass) {
-    if (vocClass === null || vocClass === undefined) return { description: "Unknown" };
-    // Assuming vocClass is like "Clean", "Moderate Pollution", "High Pollution"
-    // You might want to map these classes to specific descriptions/colors
-    return { description: vocClass }; // Or more detailed based on your classes
-}
-
-// Generic helper for other pollutants (add ranges as per standards)
-function getPollutantDescription(value, type) {
-    if (value === null || value === undefined) return "Unknown";
-    // Add your logic for CO, CO2, PM2.5, PM10 descriptions
-    // For example:
-    if (type === "CO" && value > 10) return "High";
-    if (type === "CO" && value > 5) return "Moderate";
-    return "Normal"; // Placeholder
-}
-
-// Function to update a gauge's displayed value and description
-function updateGaugeDisplay(valueElementId, descElementId, value, description) {
-    const valueEl = document.getElementById(valueElementId);
-    const descEl = document.getElementById(descElementId);
-    if (valueEl) valueEl.textContent = (value !== null && value !== undefined) ? value : "N/A";
-    if (descEl) descEl.textContent = description || "Unknown";
-}
-
-// Function to update the actual Chart.js gauge (you'll need to implement this based on your chart type)
-function updateChartJSGauge(chartInstance, canvasId, value, maxValue, label, color) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
-    if (!chartInstance) {
-        // This is a placeholder for creating a new gauge chart
-        // You might use a doughnut chart with one segment for the value
-        // and another for the remainder, or a dedicated gauge plugin.
-        console.warn(`Chart.js gauge for ${canvasId} needs to be initialized.`);
-        // Example (very basic, needs proper Chart.js setup for a gauge):
-        // chartInstance = new Chart(ctx, {
-        // type: 'doughnut',
-        // data: {
-        // datasets: [{
-        // data: [value, maxValue - value],
-        // backgroundColor: [color, '#e0e0e0'],
-        // label: label
-        // }]
-        // },
-        // options: { rotation: -90, circumference: 180, cutout: '70%' }
-        // });
-        // return chartInstance;
-    } else {
-        // Update existing chart
-        // chartInstance.data.datasets[0].data = [value, maxValue - value];
-        // chartInstance.data.datasets[0].backgroundColor[0] = color;
-        // chartInstance.update();
-    }
-    // For now, we'll just update the text until gauge logic is in place
-    console.log(`Visually update ${canvasId} to ${value} with color ${color}`);
-}
-
-
-async function fetchDataAndUpdateDashboard() {
-    try {
-        const response = await fetch(API_ENDPOINT);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log("Data from AWS:", data);
-
-        if (data.message && data.message === "Waiting for live sensor data...") {
-            console.log("Waiting for data, using defaults from Lambda if provided.");
-            // Update displays with the "waiting" message or default values
-        }
-
-        // Update AQI
-        const aqiDetails = getAQIDetails(data.aqi);
-        updateGaugeDisplay('valueAQI', 'descAQI', data.aqi, aqiDetails.description);
-        updateChartJSGauge(aqiGaugeChart, 'gaugeAQI', data.aqi, 500, 'AQI', aqiDetails.color); // Max AQI 500
-
-        // Update VOC
-        // Lambda returns voc: null and vocClass: "description string"
-        // The HTML has valueVOC (ppb) and descVOC.
-        // We will display "N/A" or 0 for ppb and use vocClass for description.
-        const vocDetails = getVOCDetails(data.vocClass);
-        updateGaugeDisplay('valueVOC', 'descVOC', data.voc, vocDetails.description); // data.voc is likely null
-        // updateChartJSGauge for VOC might need to be based on vocClass severity if no numeric value
-        // For now, let's assume valueVOC will show 'N/A' if data.voc is null.
-
-        // Update CO
-        updateGaugeDisplay('valueCO', 'descCO', data.co, getPollutantDescription(data.co, "CO"));
-        // updateChartJSGauge(coGaugeChart, 'gaugeCO', data.co, 50, 'CO', getPollutantColor(data.co)); // Max CO e.g. 50ppm
-
-        // Update CO2
-        updateGaugeDisplay('valueCO2', 'descCO2', data.co2, getPollutantDescription(data.co2, "CO2"));
-        // updateChartJSGauge(co2GaugeChart, 'gaugeCO2', data.co2, 5000, 'CO2', getPollutantColor(data.co2)); // Max CO2 e.g. 5000ppm
-
-        // Update PM2.5
-        updateGaugeDisplay('valuePM25', 'descPM25', data.pm25, getPollutantDescription(data.pm25, "PM2.5"));
-        // updateChartJSGauge(pm25GaugeChart, 'gaugePM25', data.pm25, 300, 'PM2.5', getPollutantColor(data.pm25)); // Max PM2.5 e.g. 300µg/m³
-
-        // Update PM10
-        updateGaugeDisplay('valuePM10', 'descPM10', data.pm10, getPollutantDescription(data.pm10, "PM10"));
-        // updateChartJSGauge(pm10GaugeChart, 'gaugePM10', data.pm10, 600, 'PM10', getPollutantColor(data.pm10)); // Max PM10 e.g. 600µg/m³
-
-        // Update Temperature
-        updateGaugeDisplay('valueTemp', 'descTemp', data.temp, `${data.temp}°C`); // Simple desc or add ranges
-        // updateChartJSGauge(tempGaugeChart, 'gaugeTemp', data.temp, 50, 'Temp', '#2196F3'); // Max Temp e.g. 50°C
-
-        // Update Pressure
-        updateGaugeDisplay('valuePressure', 'descPressure', data.pressure, `${data.pressure} hPa`);
-        // updateChartJSGauge(pressureGaugeChart, 'gaugePressure', data.pressure, 1100, 'Pressure', '#795548'); // Range e.g. 900-1100 hPa
-
-        // Update Humidity
-        updateGaugeDisplay('valueHumidity', 'descHumidity', data.humidity, `${data.humidity}%`);
-        // updateChartJSGauge(humidityGaugeChart, 'gaugeHumidity', data.humidity, 100, 'Humidity', '#00BCD4');
-
-        // Update Timestamp in the header
-        const dateTimeEl = document.getElementById('dateTime');
-        if (dateTimeEl && data.timestamp) {
-            dateTimeEl.textContent = `Last Updated: ${new Date(data.timestamp).toLocaleString()}`;
-        }
-
-        // Update line chart (assuming you have historical data or want to plot current AQI over time)
-        // This requires more complex data handling (e.g., fetching a series of data points)
-        // For now, this is a placeholder:
-        // updateAqiLineChart([{ timestamp: new Date(data.timestamp).toLocaleTimeString(), aqiValue: data.aqi }]);
-
-    } catch (error) {
-        console.error("Could not fetch or update air quality data:", error);
-        updateGaugeDisplay('valueAQI', 'descAQI', 'Error', 'Failed to load data');
-        // Update other gauges to show error state
-        document.getElementById('valueVOC').textContent = "Error";
-        document.getElementById('descVOC').textContent = "Failed to load data";
-        // ... and so on for all other gauges
-    }
-}
-
-// Function to update the main date and time (client-side clock for the header)
-// You can choose to use the server timestamp for "Last Updated" as done above.
-function updateClientDateTime() {
-    const now = new Date();
-    const dateTimeElement = document.getElementById('dateTime');
-    if (dateTimeElement && !dateTimeElement.textContent.startsWith("Last Updated")) { // Only if not set by server data
-         dateTimeElement.textContent = now.toLocaleString();
-    }
-}
-
-// Initialize Chart.js Gauges and Line Chart (called once on load)
-function initializeCharts() {
-    // This is where you would use Chart.js to create your gauge and line chart instances.
-    // For each canvas (e.g., 'gaugeAQI', 'gaugeVOC', ..., 'aqiLineChart'),
-    // you'd create a new Chart object and store its instance in the global variables.
-    // Example for the line chart (you'll need to adapt for gauges):
-    const aqiLineCtx = document.getElementById('aqiLineChart').getContext('2d');
-    aqiLineChartInstance = new Chart(aqiLineCtx, {
-        type: 'line',
-        data: {
-            labels: [], // To be populated with timestamps
-            datasets: [{
-                label: 'AQI Over Time',
-                data: [], // To be populated with AQI values
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            scales: {
-                y: { beginAtZero: true, suggestedMax: 300 }, // Adjust suggestedMax as needed
-                x: { type: 'time', time: { unit: 'minute' } } // If using time series data
-            },
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // You need to implement or find a Chart.js plugin for the gauge visuals.
-    // For now, the updateChartJSGauge function above is a placeholder.
-    // Initialize other gauge chart instances here (e.g., aqiGaugeChart = new Chart(...))
-    console.log("Chart.js instances should be initialized here.");
-}
-
-
-// Run when the window loads
-window.onload = () => {
-    updateClientDateTime(); // Set initial time
-    setInterval(updateClientDateTime, 60000); // Update client-side clock every minute if not using server time
-
-    initializeCharts(); // Setup your Chart.js charts
-    fetchDataAndUpdateDashboard(); // Fetch initial data
-
-    // Fetch data periodically (e.g., every 1 minute)
-    setInterval(fetchDataAndUpdateDashboard, 60 * 1000);
+const gauges = {
+  aqi: createGauge('gaugeAQI', 500, '#f44336'),
+  voc: createGauge('gaugeVOC', 1000, '#ff9800'),
+  co: createGauge('gaugeCO', 100, '#ffeb3b'),
+  co2: createGauge('gaugeCO2', 2000, '#4caf50'),
+  pm25: createGauge('gaugePM25', 200, '#2196f3'),
+  pm10: createGauge('gaugePM10', 300, '#9c27b0'),
+  temp: createGauge('gaugeTemp', 50, '#e91e63'),
+  pressure: createGauge('gaugePressure', 1100, '#00bcd4'),
+  humidity: createGauge('gaugeHumidity', 100, '#673ab7')
 };
 
-// Placeholder function to update the line chart with new data
-// This is a simplified example; you'll need to manage labels and datasets properly
-let historicalDataPoints = []; // Store data points for the line chart
-const MAX_DATA_POINTS = 20; // Max points to show on the chart
+function getAQIDescription(aqi) { if (aqi <= 50) return "Good"; if (aqi <= 100) return "Moderate"; if (aqi <= 150) return "Unhealthy for Sensitive Groups"; if (aqi <= 200) return "Unhealthy"; if (aqi <= 300) return "Very Unhealthy"; return "Hazardous"; }
+function getVOCDescription(voc) { if (voc <= 200) return "Good"; if (voc <= 400) return "Moderate"; if (voc <= 800) return "Unhealthy"; return "Very Unhealthy"; }
+function getCO2Description(co2) { if (co2 <= 600) return "Good"; if (co2 <= 1000) return "Moderate"; if (co2 <= 2000) return "Unhealthy"; return "Very Unhealthy"; }
+function getPMDescription(pm) { if (pm <= 12) return "Good"; if (pm <= 35) return "Moderate"; if (pm <= 55) return "Unhealthy for Sensitive Groups"; if (pm <= 150) return "Unhealthy"; return "Very Unhealthy"; }
+function getCODescription(co) { if (co <= 4.4) return "Good"; if (co <= 9.4) return "Moderate"; if (co <= 12.4) return "Unhealthy for Sensitive Groups"; if (co <= 15.4) return "Unhealthy"; return "Very Unhealthy"; }
+function getTempDescription(temp) { if (temp <= 10) return "Cold"; if (temp <= 25) return "Comfortable"; if (temp <= 35) return "Warm"; return "Hot"; }
+function getPressureDescription(pressure) { if (pressure < 1000) return "Low Pressure"; if (pressure <= 1020) return "Normal Pressure"; return "High Pressure"; }
+function getHumidityDescription(h) { if (h < 30) return "Dry"; if (h <= 60) return "Comfortable"; return "Humid";}
 
-function updateAqiLineChart(newDataPoint) { // newDataPoint = { timestamp: new Date(), aqiValue: data.aqi }
-    if (!aqiLineChartInstance) return;
+const aqiChart = new Chart(document.getElementById('aqiLineChart'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'AQI', data: [], borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.2)', fill: true, tension: 0.3 },
+      { label: 'VOC (ppb)', data: [], borderColor: '#ff9800', backgroundColor: 'rgba(255, 152, 0, 0.2)', fill: true, tension: 0.3 },
+      { label: 'CO (ppm)', data: [], borderColor: '#ffeb3b', backgroundColor: 'rgba(255, 235, 59, 0.2)', fill: true, tension: 0.3 },
+      { label: 'CO₂ (ppm)', data: [], borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.2)', fill: true, tension: 0.3 },
+      { label: 'PM2.5 (µg/m³)', data: [], borderColor: '#2196f3', backgroundColor: 'rgba(33, 150, 243, 0.2)', fill: true, tension: 0.3 },
+      { label: 'PM10 (µg/m³)', data: [], borderColor: '#9c27b0', backgroundColor: 'rgba(156, 39, 176, 0.2)', fill: true, tension: 0.3 },
+      { label: 'Temperature (°C)', data: [], borderColor: '#e91e63', backgroundColor: 'rgba(233, 30, 99, 0.2)', fill: true, tension: 0.3 },
+      { label: 'Pressure (hPa)', data: [], borderColor: '#00bcd4', backgroundColor: 'rgba(0, 188, 212, 0.2)', fill: true, tension: 0.3 },
+      { label: 'Humidity (%)', data: [], borderColor: '#673ab7', backgroundColor: 'rgba(103, 58, 183, 0.2)', fill: true, tension: 0.3 }
+    ]
+  },
+  options: { scales: { y: { beginAtZero: true } }, responsive: true, plugins: { legend: { position: 'top' } } }
+});
 
-    const chart = aqiLineChartInstance;
+const fetchData = async () => {
+  try {
+    const json = {
+      
+      //Simulation data code
+      aqi: Math.floor(Math.random() * 500), 
+      voc: Math.floor(Math.random() * 1000),
+      co: Math.floor(Math.random() * 100),  
+      co2: Math.floor(Math.random() * 2000), 
+      pm25: Math.floor(Math.random() * 200), 
+      pm10: Math.floor(Math.random() * 300), 
+      temp: (Math.random() * 50).toFixed(1), 
+      pressure: Math.floor(950 + Math.random() * 150), 
+      humidity: Math.floor(Math.random() * 101) };
+    
+    //Real code
+    //const res = await fetch('/data');
+    //const json = await res.json();
 
-    // Add new data
-    chart.data.labels.push(newDataPoint.timestamp);
-    chart.data.datasets.forEach((dataset) => {
-        dataset.data.push(newDataPoint.aqiValue);
-    });
+    gauges.aqi.data = gaugeData(json.aqi, 500, '#f44336');
+    gauges.voc.data = gaugeData(json.voc, 1000, '#ff9800');
+    gauges.co.data = gaugeData(json.co, 100, '#ffeb3b');
+    gauges.co2.data = gaugeData(json.co2, 2000, '#4caf50');
+    gauges.pm25.data = gaugeData(json.pm25, 200, '#2196f3');
+    gauges.pm10.data = gaugeData(json.pm10, 300, '#9c27b0');  
+    gauges.temp.data = gaugeData(json.temp, 50, '#e91e63');
+    gauges.pressure.data = gaugeData(json.pressure, 1100, '#00bcd4');
+    gauges.humidity.data = gaugeData(json.humidity, 100, '#673ab7');
 
-    // Limit the number of data points
-    if (chart.data.labels.length > MAX_DATA_POINTS) {
-        chart.data.labels.shift(); // Remove the oldest label
-        chart.data.datasets.forEach((dataset) => {
-            dataset.data.shift(); // Remove the oldest data point
-        });
+    for (let key in gauges) { gauges[key].update(); }
+
+    document.getElementById('valueAQI').innerText = `${json.aqi}`;
+    document.getElementById('valueVOC').innerText = `${json.voc} ppb`;
+    document.getElementById('valueCO').innerText = `${json.co} ppm`;
+    document.getElementById('valueCO2').innerText = `${json.co2} ppm`;
+    document.getElementById('valuePM25').innerText = `${json.pm25} µg/m³`;
+    document.getElementById('valuePM10').innerText = `${json.pm10} µg/m³`;
+    document.getElementById('valueTemp').innerText = `${json.temp} °C`;
+    document.getElementById('valuePressure').innerText = `${json.pressure} hPa`;
+    document.getElementById('valueHumidity').innerText = `${json.humidity} %`;
+
+    document.getElementById('descAQI').innerText = getAQIDescription(json.aqi);
+    document.getElementById('descVOC').innerText = getVOCDescription(json.voc);
+    document.getElementById('descCO').innerText = getCODescription(json.co);
+    document.getElementById('descCO2').innerText = getCO2Description(json.co2);
+    document.getElementById('descPM25').innerText = getPMDescription(json.pm25);
+    document.getElementById('descPM10').innerText = getPMDescription(json.pm10);
+    document.getElementById('descTemp').innerText = getTempDescription(json.temp);
+    document.getElementById('descPressure').innerText = getPressureDescription(json.pressure);
+    document.getElementById('descHumidity').innerText = getHumidityDescription(json.humidity);
+
+    const now = new Date().toLocaleTimeString();
+    const ds = aqiChart.data.datasets;
+    aqiChart.data.labels.push(now);
+    ds[0].data.push(json.aqi);
+    ds[1].data.push(json.voc);
+    ds[2].data.push(json.co);  
+    ds[3].data.push(json.co2); 
+    ds[4].data.push(json.pm25); 
+    ds[5].data.push(json.pm10); 
+    ds[6].data.push(json.temp); 
+    ds[7].data.push(json.pressure);
+    ds[8].data.push(json.humidity);
+
+    if (aqiChart.data.labels.length > 20) { 
+      aqiChart.data.labels.shift(); 
+      ds.forEach(d => d.data.shift()); 
     }
-    chart.update();
+
+    aqiChart.update();
+  } catch (err) { console.error('Failed to simulate data:', err); }
+};
+
+setInterval(fetchData, 5000);
+fetchData();
+
+function updateDateTime() {
+  const now = new Date();
+  const options = {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+  };
+  const formatted = now.toLocaleString("en-US", options);
+  document.getElementById("dateTime").textContent = formatted;
 }
 
-// Modify fetchDataAndUpdateDashboard to call updateAqiLineChart
-// Inside fetchDataAndUpdateDashboard, after getting `data`:
-// if (data.aqi !== null && data.aqi !== undefined && data.timestamp) {
-//     updateAqiLineChart({ timestamp: new Date(data.timestamp), aqiValue: data.aqi });
-// }
+setInterval(updateDateTime, 1000);
+updateDateTime();
+
+//Work it, make it, do it, makes us
+//Harder, better, faster, stronger
+//More than, hour, hour, never, ever, after, work is, over
+//Work it harder, make it better, Do it faster, makes us stronger
+//More than ever, hour after hour, Work is never over
