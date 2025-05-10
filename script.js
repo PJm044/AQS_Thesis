@@ -35,7 +35,7 @@ const createGauge = (id, max, color) => {
   const ctx = document.getElementById(id);
   if (!ctx) {
     console.error(`Gauge canvas with ID "${id}" not found.`);
-    return null; // Return null or a dummy object to prevent further errors
+    return null;
   }
   return new Chart(ctx, { // Ensure Chart is globally available or imported
     ...gaugeConfigs,
@@ -64,7 +64,7 @@ const gauges = {
 // ----------- AQI calculation & descriptions (Your existing functions) -----------
 function calculateAQI(pm25_value) {
   const C = parseFloat(pm25_value);
-  if (isNaN(C) || C < 0) return 0; // Default to 0 or handle as N/A
+  if (isNaN(C) || C < 0) return 0;
   let I_low, I_high, C_low, C_high;
   if (C >= 0 && C <= 12.0) { I_low = 0; I_high = 50; C_low = 0.0; C_high = 12.0; }
   else if (C > 12.0 && C <= 35.4) { I_low = 51; I_high = 100; C_low = 12.1; C_high = 35.4; }
@@ -73,7 +73,7 @@ function calculateAQI(pm25_value) {
   else if (C > 150.4 && C <= 250.4) { I_low = 201; I_high = 300; C_low = 150.5; C_high = 250.4; }
   else if (C > 250.4 && C <= 350.4) { I_low = 301; I_high = 400; C_low = 250.5; C_high = 350.4; }
   else if (C > 350.4 && C <= 500.4) { I_low = 401; I_high = 500; C_low = 350.5; C_high = 500.4; }
-  else { return 500; } // Cap at 500 for values > 500.4
+  else { return 500; }
   return Math.round(((I_high - I_low) / (C_high - C_low)) * (C - C_low) + I_low);
 }
 
@@ -87,7 +87,7 @@ function getAQIDescription(aqi) {
   return "Hazardous";
 }
 function getVOCDescription(vocClass) {
-  const voc = parseInt(vocClass); // Assuming vocClass from API is a number (0, 1, 2, 3)
+  const voc = parseInt(vocClass);
   if (isNaN(voc)) return `Unknown (${vocClass})`;
   switch (voc) {
     case 0: return "Clean Air (No VOCs)"; case 1: return "Low VOCs";
@@ -139,7 +139,7 @@ function getHumidityDescription(h) {
 }
 
 // ----------- Historical line chart -----------
-let aqiChart = null; // Initialize to null, will be created in DOMContentLoaded
+let aqiChart = null;
 const initializeChart = () => {
     const aqiChartContext = document.getElementById('aqiLineChart')?.getContext('2d');
     if (!aqiChartContext) {
@@ -178,23 +178,22 @@ const initializeChart = () => {
 
 // ----------- localStorage Functions for Chart Data -----------
 function saveChartDataToLocalStorage(chart) {
-  if (!chart) return; // Guard against null chart object
+  if (!chart) return;
   const dataToSave = { labels: chart.data.labels, datasets: chart.data.datasets.map(ds => ({
-    label: ds.label, data: [...ds.data], borderColor: ds.borderColor, backgroundColor: ds.backgroundColor, // Ensure data is copied
+    label: ds.label, data: [...ds.data], borderColor: ds.borderColor, backgroundColor: ds.backgroundColor,
     fill: ds.fill, tension: ds.tension, yAxisID: ds.yAxisID
   }))};
   try { localStorage.setItem(LOCAL_STORAGE_CHART_KEY, JSON.stringify(dataToSave)); }
   catch (e) { console.error("Error saving chart data to localStorage:", e); }
 }
 function loadChartDataFromLocalStorage(chart) {
-  if (!chart) return; // Guard against null chart object
+  if (!chart) return;
   const savedData = localStorage.getItem(LOCAL_STORAGE_CHART_KEY);
   if (savedData) {
     try {
       const parsedData = JSON.parse(savedData);
       if (parsedData && parsedData.labels && parsedData.datasets) {
         chart.data.labels = parsedData.labels;
-        // Ensure datasets are matched by label, or by index as a fallback
         chart.data.datasets.forEach((chartDataset) => {
             const savedDataset = parsedData.datasets.find(ds => ds.label === chartDataset.label);
             if (savedDataset && savedDataset.data) {
@@ -206,7 +205,7 @@ function loadChartDataFromLocalStorage(chart) {
       }
     } catch (e) { 
         console.error("Error parsing chart data from localStorage:", e); 
-        localStorage.removeItem(LOCAL_STORAGE_CHART_KEY); // Clear corrupted data
+        localStorage.removeItem(LOCAL_STORAGE_CHART_KEY);
     }
   }
 }
@@ -214,23 +213,23 @@ function loadChartDataFromLocalStorage(chart) {
 // ----------- Fetch & render data (MODIFIED FOR NEW API GATEWAY ENDPOINT) -----------
 const fetchData = async () => {
   try {
-    // Replace with your actual deviceId you want to query
+    // Replace 'main_air_quality_monitor' with your actual deviceId if it's different
     const deviceIdToQuery = 'main_air_quality_monitor'; 
     
-    // !!! IMPORTANT: REPLACE THE URL BELOW WITH YOUR ACTUAL API GATEWAY INVOKE URL !!!
-    // It should look something like: https://xxxxxxxxx.execute-api.your-region.amazonaws.com/your-stage/latestdata
-    const apiUrl = `https://YOUR_API_GATEWAY_INVOKE_URL_GOES_HERE/prod/latestdata?deviceId=${deviceIdToQuery}`;
+    // !!! YOUR API GATEWAY INVOKE URL IS USED HERE !!!
+    // The resource path is '/latestdata' and we pass 'deviceId' as a query parameter.
+    const apiUrl = `https://bv26gf149c.execute-api.ap-southeast-1.amazonaws.com/prod/latestdata?deviceId=${deviceIdToQuery}`;
     
     console.log(`Workspaceing data from: ${apiUrl} at: ${new Date().toLocaleTimeString()}`);
 
-    // If your API Gateway endpoint requires an API Key:
-    // const apiKey = 'YOUR_API_GATEWAY_API_KEY';
+    // If your API Gateway endpoint requires an API Key (configured in API Gateway, not Amplify):
+    // const apiKey = 'YOUR_API_GATEWAY_GENERATED_API_KEY';
     // const res = await fetch(apiUrl, {
     //   headers: {
     //     'x-api-key': apiKey
     //   }
     // });
-    // If no API Key is required by API Gateway (open or IAM auth for example):
+    // If no API Key is required by API Gateway:
     const res = await fetch(apiUrl);
 
     if (!res.ok) {
@@ -241,21 +240,17 @@ const fetchData = async () => {
         const errorData = await res.json(); 
         console.error('Error details from API:', errorData); 
       } catch (e) { 
-        // If error response isn't JSON, log the text
         const errorText = await res.text();
         console.error('Could not parse error response from API as JSON. Response text:', errorText);
       }
       return;
     }
 
-    const data = await res.json(); // Lambda should return the data object directly
+    const data = await res.json(); 
     console.log("Raw data received from API:", JSON.stringify(data));
 
-    // The Lambda should return an object with fields:
-    // VOC_ZP07_Class, CO, CO2, PM2_5, PM10_0, Temp_AHT20, Pressure_BMP280, Humidity_AHT20, timestamp
     if (!data || Object.keys(data).length === 0 || data.timestamp === undefined || data.timestamp === null) { 
       console.warn('API returned no data, an empty object, or data missing a "timestamp" field. Current data:', JSON.stringify(data));
-      // Optionally, update a status element on the page or clear gauges
       const descAqiElement = document.getElementById('descAQI');
       if (descAqiElement) descAqiElement.innerText = 'Waiting for data...';
       return;
@@ -270,34 +265,23 @@ const fetchData = async () => {
       temp:     data.Temp_AHT20 !== null && data.Temp_AHT20 !== undefined ? parseFloat(data.Temp_AHT20) : NaN,
       pressure: data.Pressure_BMP280 !== null && data.Pressure_BMP280 !== undefined ? parseFloat(data.Pressure_BMP280) : NaN,
       humidity: data.Humidity_AHT20 !== null && data.Humidity_AHT20 !== undefined ? parseFloat(data.Humidity_AHT20) : NaN,
-      apiTimestamp: data.timestamp // Use the 'timestamp' field from our API response (which is eventTimestamp from DDB)
+      apiTimestamp: data.timestamp 
     };
-    processedData.aqi = calculateAQI(processedData.pm25); // calculateAQI handles NaN for pm25
+    processedData.aqi = calculateAQI(processedData.pm25);
 
     console.log("Data processed for UI update:", JSON.stringify(processedData));
-
-    // Handle NaN values before updating UI, default to 0 or a placeholder if appropriate for your display
-    for (const key in processedData) {
-        if (key !== 'apiTimestamp' && typeof processedData[key] === 'number' && isNaN(processedData[key])) {
-            console.warn(`Processed data for "${key}" is NaN. Original API value may have been null or unparseable: "${data[key]}".`);
-            // Displaying 'N/A' or 0 is handled by the setText and updateGauge functions if value is NaN
-        }
-    }
     
-    // --- Gauge Updates ---
     const updateGauge = (gaugeName, value) => {
-        const val = parseFloat(value); // Value is already a number or NaN from processedData
+        const val = parseFloat(value);
         const max = GAUGE_MAX_VALUES[gaugeName];
         const currentGauge = gauges[gaugeName];
-        if (currentGauge) { // Check if gauge was successfully created
+        if (currentGauge) {
             if (!isNaN(val)) {
                 currentGauge.data.datasets[0].data = [Math.min(val, max), Math.max(0, max - Math.min(val,max))];
-            } else { // Handle NaN - show empty gauge or specific state
-                currentGauge.data.datasets[0].data = [0, max]; // Example: Show as 0
+            } else {
+                currentGauge.data.datasets[0].data = [0, max];
             }
             currentGauge.update('none');
-        } else {
-            // console.warn(`Gauge "${gaugeName}" not found or not initialized.`);
         }
     };
     updateGauge('aqi', processedData.aqi); updateGauge('voc', processedData.voc);
@@ -306,7 +290,6 @@ const fetchData = async () => {
     updateGauge('temp', processedData.temp); updateGauge('pressure', processedData.pressure);
     updateGauge('humidity', processedData.humidity);
 
-    // --- Text Value Updates ---
     const setElementText = (id, text) => {
         const element = document.getElementById(id);
         if (element) { element.innerText = text; } 
@@ -316,7 +299,7 @@ const fetchData = async () => {
         !isNaN(parseFloat(value)) ? `${parseFloat(value).toFixed(decimals)}${unit}` : 'N/A';
 
     setElementText('valueAQI',      formatValue(processedData.aqi, '', 0));
-    setElementText('valueVOC',      formatValue(processedData.voc, '', 0)); // VOC class is usually integer
+    setElementText('valueVOC',      formatValue(processedData.voc, '', 0));
     setElementText('valueCO',       formatValue(processedData.co, ' ppm'));
     setElementText('valueCO2',      formatValue(processedData.co2, ' ppm', 0));
     setElementText('valuePM25',     formatValue(processedData.pm25, ' µg/m³'));
@@ -325,7 +308,6 @@ const fetchData = async () => {
     setElementText('valuePressure', formatValue(processedData.pressure, ' hPa', 0));
     setElementText('valueHumidity', formatValue(processedData.humidity, ' %'));
 
-    // --- Description Updates ---
     setElementText('descAQI',      getAQIDescription(processedData.aqi));
     setElementText('descVOC',      getVOCDescription(processedData.voc));
     setElementText('descCO',       getCODescription(processedData.co));
@@ -336,7 +318,6 @@ const fetchData = async () => {
     setElementText('descPressure', getPressureDescription(processedData.pressure));
     setElementText('descHumidity', getHumidityDescription(processedData.humidity));
 
-    // --- Chart Update ---
     if (!aqiChart) {
         console.warn("aqiChart object not initialized. Skipping chart update.");
         return;
@@ -347,13 +328,10 @@ const fetchData = async () => {
     
     console.log("Current dataTime for chart:", dataTime);
 
-    // Only add new data if the timestamp is different or it's the first point
     if (aqiChart.data.labels.length === 0 || aqiChart.data.labels[aqiChart.data.labels.length - 1] !== dataTime) {
         console.log("Updating chart: new dataTime or first data point.");
         aqiChart.data.labels.push(dataTime);
         const datasets = aqiChart.data.datasets;
-
-        // Helper to push data, defaulting to null if NaN (Chart.js can handle nulls for gaps)
         const pushChartData = (value) => (isNaN(parseFloat(value)) ? null : parseFloat(value));
 
         datasets[0].data.push(pushChartData(processedData.aqi)); 
@@ -370,10 +348,10 @@ const fetchData = async () => {
           aqiChart.data.labels.shift();
           datasets.forEach(ds => ds.data.shift());
         }
-        aqiChart.update('none'); // 'none' to prevent re-animation for instant update
+        aqiChart.update('none');
         saveChartDataToLocalStorage(aqiChart);
     } else {
-        console.log("Skipping chart data point addition: timestamp (dataTime) is identical to the last point. Gauges and text should have updated if their respective values changed.");
+        console.log("Skipping chart data point addition: timestamp (dataTime) is identical to the last point.");
     }
 
   } catch (err) {
@@ -399,15 +377,15 @@ function updateDateTime() {
 
 // ----------- Initial Setup -----------
 document.addEventListener('DOMContentLoaded', () => {
-  initializeChart(); // Create the chart instance
+  initializeChart(); 
 
-  if (aqiChart) { // Only load if chart was successfully initialized
+  if (aqiChart) { 
     loadChartDataFromLocalStorage(aqiChart);
   }
   
   updateDateTime();
-  setInterval(updateDateTime, 1000); // Update time every second
+  setInterval(updateDateTime, 1000);
   
-  fetchData(); // Initial data fetch
-  setInterval(fetchData, 5000); // Fetch new data every 5 seconds
+  fetchData(); 
+  setInterval(fetchData, 5000);
 });
