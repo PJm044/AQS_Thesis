@@ -37,14 +37,13 @@ const createGauge = (id, max, color) => {
 };
 
 // ----------- Gauges with correct maxes -----------
-// Max values for gauges (ensure these align with expected data ranges and interpretation functions)
 const GAUGE_MAX_VALUES = {
   aqi: 500,
   voc: 3,
-  co: 15.4, // Based on Unhealthy threshold
-  co2: 2000, // Up to "Unhealthy" or "Moderate"
-  pm25: 150.4, // Based on Unhealthy on AQI scale
-  pm10: 154, // Based on Unhealthy for Sensitive on AQI scale (can be higher)
+  co: 15.4,
+  co2: 2000,
+  pm25: 150.4,
+  pm10: 154,
   temp: 50,
   pressure: 1100,
   humidity: 100
@@ -65,10 +64,8 @@ const gauges = {
 // ----------- AQI calculation & descriptions -----------
 function calculateAQI(pm25_value) {
   const C = parseFloat(pm25_value);
-  if (isNaN(C) || C < 0) return 0; // Return 0 or handle as appropriate if value is invalid
-
+  if (isNaN(C) || C < 0) return 0;
   let I_low, I_high, C_low, C_high;
-
   if (C >= 0 && C <= 12.0) { I_low = 0; I_high = 50; C_low = 0.0; C_high = 12.0; }
   else if (C > 12.0 && C <= 35.4) { I_low = 51; I_high = 100; C_low = 12.1; C_high = 35.4; }
   else if (C > 35.4 && C <= 55.4) { I_low = 101; I_high = 150; C_low = 35.5; C_high = 55.4; }
@@ -76,8 +73,7 @@ function calculateAQI(pm25_value) {
   else if (C > 150.4 && C <= 250.4) { I_low = 201; I_high = 300; C_low = 150.5; C_high = 250.4; }
   else if (C > 250.4 && C <= 350.4) { I_low = 301; I_high = 400; C_low = 250.5; C_high = 350.4; }
   else if (C > 350.4 && C <= 500.4) { I_low = 401; I_high = 500; C_low = 350.5; C_high = 500.4; }
-  else { return 500; } // Cap at 500 if C > 500.4
-  
+  else { return 500; }
   return Math.round(((I_high - I_low) / (C_high - C_low)) * (C - C_low) + I_low);
 }
 
@@ -102,7 +98,6 @@ function getVOCDescription(vocClass) {
     default: return `Unknown (${vocClass})`;
   }
 }
-
 function getCODescription(co) {
   if (isNaN(co)) return "N/A";
   if (co <= 4.4)   return "Good";
@@ -111,7 +106,6 @@ function getCODescription(co) {
   if (co <= 15.4)  return "Unhealthy";
   return "Very Unhealthy";
 }
-
 function getCO2Description(co2) {
   if (isNaN(co2)) return "N/A";
   if (co2 <= 600)   return "Excellent (Typical Outdoor)";
@@ -119,7 +113,6 @@ function getCO2Description(co2) {
   if (co2 <= 2000)  return "Moderate (Complaints of drowsiness)";
   return "High (Potential health effects)";
 }
-
 function getPMDescription(pm_value) {
     const val = parseFloat(pm_value);
     if (isNaN(val)) return "N/A";
@@ -130,7 +123,6 @@ function getPMDescription(pm_value) {
     if (val <= 250.4) return "Very Unhealthy";
     return "Hazardous";
 }
-
 function getTempDescription(t) {
   if (isNaN(t)) return "N/A";
   if (t < 10)   return "Cold";
@@ -139,21 +131,18 @@ function getTempDescription(t) {
   if (t <= 32)  return "Warm";
   return "Hot";
 }
-
 function getPressureDescription(p) {
   if (isNaN(p)) return "N/A";
   if (p < 1000)   return "Low Pressure";
   if (p <= 1020)  return "Normal Pressure";
   return "High Pressure";
 }
-
 function getHumidityDescription(h) {
   if (isNaN(h)) return "N/A";
   if (h < 30)    return "Dry";
   if (h <= 60)   return "Comfortable";
   return "Humid";
 }
-
 
 // ----------- Historical line chart -----------
 const aqiChartContext = document.getElementById('aqiLineChart').getContext('2d');
@@ -184,12 +173,12 @@ const aqiChart = new Chart(aqiChartContext, {
       yVOC: { type: 'linear', display: true, position: 'right', beginAtZero: true, max: GAUGE_MAX_VALUES.voc + 1, ticks: { stepSize: 1 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'VOC Class' }},
       yCO2: { type: 'linear', display: true, position: 'right', beginAtZero: true, max: GAUGE_MAX_VALUES.co2 + 500, grid: { drawOnChartArea: false }, title: { display: true, text: 'CO₂ (ppm)' }},
       yPressure: { type: 'linear', display: true, position: 'right', min: 900, max: GAUGE_MAX_VALUES.pressure, grid: { drawOnChartArea: false }, title: { display: true, text: 'Pressure (hPa)' }},
-      yOtherSmall: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 50, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Small Scale)' }}, // For CO, Temp
-      yOtherMedium: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 200, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Medium Scale)' }}, // For PM2.5, PM10, Humidity
+      yOtherSmall: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 50, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Small Scale)' }},
+      yOtherMedium: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 200, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Medium Scale)' }},
       x: { title: { display: true, text: 'Time' }}
     },
     animation: {
-        duration: 0 // Disable animation for chart updates
+        duration: 0
     }
   }
 });
@@ -201,7 +190,6 @@ function saveChartDataToLocalStorage(chart) {
     datasets: chart.data.datasets.map(dataset => ({
         label: dataset.label,
         data: dataset.data,
-        // Retain styling properties if needed, or re-apply on load from initial config
         borderColor: dataset.borderColor,
         backgroundColor: dataset.backgroundColor,
         fill: dataset.fill,
@@ -213,7 +201,6 @@ function saveChartDataToLocalStorage(chart) {
     localStorage.setItem(LOCAL_STORAGE_CHART_KEY, JSON.stringify(dataToSave));
   } catch (e) {
     console.error("Error saving chart data to localStorage:", e);
-    // Potentially handle quota exceeded errors
   }
 }
 
@@ -225,15 +212,10 @@ function loadChartDataFromLocalStorage(chart) {
       if (parsedData && parsedData.labels && parsedData.datasets) {
         chart.data.labels = parsedData.labels;
         chart.data.datasets.forEach((chartDataset, index) => {
-            // Find the saved dataset by label, as order might not be guaranteed
-            // or assume saved order matches initial config order
             const savedDataset = parsedData.datasets.find(ds => ds.label === chartDataset.label);
             if (savedDataset && savedDataset.data) {
                 chartDataset.data = savedDataset.data;
-                // Optionally restore other properties if not relying on initial config
-                // chartDataset.borderColor = savedDataset.borderColor;
-                // ... etc.
-            } else if (parsedData.datasets[index]) { // Fallback to order if label not found
+            } else if (parsedData.datasets[index]) {
                  chartDataset.data = parsedData.datasets[index].data;
             }
         });
@@ -242,65 +224,58 @@ function loadChartDataFromLocalStorage(chart) {
       }
     } catch (e) {
       console.error("Error parsing chart data from localStorage:", e);
-      localStorage.removeItem(LOCAL_STORAGE_CHART_KEY); // Clear corrupted data
+      localStorage.removeItem(LOCAL_STORAGE_CHART_KEY);
     }
   }
 }
 
-
 // ----------- Fetch & render data -----------
 const fetchData = async () => {
   try {
-    // !!! API URL Updated with your endpoint !!!
     const apiUrl = 'https://3yy35wil8i.execute-api.ap-southeast-1.amazonaws.com/prod/latestdata';
     
     const res = await fetch(apiUrl);
     if (!res.ok) {
-      document.getElementById('descAQI').innerText = `API Error: ${res.status}`; // Update UI
+      document.getElementById('descAQI').innerText = `API Error: ${res.status}`;
       console.error(`API fetch failed: ${res.status} ${res.statusText}`);
-      try { const errorData = await res.json(); console.error('Error details:', errorData); } catch (e) { /* ignore if response not json */ }
+      try { const errorData = await res.json(); console.error('Error details:', errorData); } catch (e) { /* ignore */ }
       return;
     }
 
     const data = await res.json();
 
-    // --- NAMING SCHEME ---
-    // VITAL: Ensure these keys (e.g., data.VOC_ZP07_Class) EXACTLY match your DynamoDB attribute names.
-    // Case sensitivity matters!
-    if (!data || Object.keys(data).length === 0 || !data.Data_timestamp) { // Check for a key field like Data_timestamp
-      console.warn('API returned no data or incomplete data. Waiting for next fetch.');
-      // document.getElementById('descAQI').innerText = 'Waiting for new data...'; // Update UI
+    // CORRECTED: Changed data.Data_timestamp to data.timestamp
+    if (!data || Object.keys(data).length === 0 || !data.timestamp) { 
+      console.warn('API returned no data or incomplete data (or missing timestamp). Waiting for next fetch.');
+      // Optionally update a status element: document.getElementById('statusMessage').innerText = 'Waiting for new sensor data...';
       return;
     }
 
     const processedData = {
-      // -----BEGIN --- Double Check Your DynamoDB Naming Scheme Here -----
       voc:      parseFloat(data.VOC_ZP07_Class),
       co:       parseFloat(data.CO),
       co2:      parseFloat(data.CO2),
       pm25:     parseFloat(data.PM2_5),
-      pm10:     parseFloat(data.PM10_0), // Example: Is it PM10_0 or PM10? Confirm this.
-      temp:     parseFloat(data.Temp_AHT20), // Example: Is it Temp_AHT20 or Temperature_AHT20? Confirm.
+      pm10:     parseFloat(data.PM10_0),
+      temp:     parseFloat(data.Temp_AHT20),
       pressure: parseFloat(data.Pressure_BMP280),
       humidity: parseFloat(data.Humidity_AHT20),
-      timestamp: data.Data_timestamp // Assuming 'Data_timestamp' is the field name from your DB
-      // -----END --- Double Check Your DynamoDB Naming Scheme Here -----
+      // CORRECTED: Changed data.Data_timestamp to data.timestamp
+      timestamp: data.timestamp 
     };
     processedData.aqi = calculateAQI(processedData.pm25);
 
-    // Validate processed data (simple check for NaN)
     for (const key in processedData) {
         if (typeof processedData[key] === 'number' && isNaN(processedData[key])) {
             console.warn(`Processed data for ${key} is NaN. Original value from API: ${data[key]}. Using 0 as default.`);
-            processedData[key] = 0; // Default to 0 if parsing failed, to prevent chart errors. Adjust as needed.
+            processedData[key] = 0; 
         }
     }
     
-    // Update gauges
     const updateGauge = (gaugeName, value) => {
-        const val = parseFloat(value); // Ensure it's a number
+        const val = parseFloat(value);
         const max = GAUGE_MAX_VALUES[gaugeName];
-        if (!isNaN(val) && gauges[gaugeName]) { // Check if gauge exists and value is a number
+        if (!isNaN(val) && gauges[gaugeName]) {
             gauges[gaugeName].data.datasets[0].data = [Math.min(val, max), Math.max(0, max - Math.min(val,max))];
             gauges[gaugeName].update('none');
         } else {
@@ -318,8 +293,6 @@ const fetchData = async () => {
     updateGauge('pressure', processedData.pressure);
     updateGauge('humidity', processedData.humidity);
 
-
-    // Update numeric text
     const setElementText = (id, text) => {
         const element = document.getElementById(id);
         if (element) {
@@ -329,7 +302,7 @@ const fetchData = async () => {
         }
     };
     setElementText('valueAQI',      !isNaN(processedData.aqi) ? processedData.aqi : 'N/A');
-    setElementText('valueVOC',      !isNaN(processedData.voc) ? processedData.voc : 'N/A'); // Displaying class number
+    setElementText('valueVOC',      !isNaN(processedData.voc) ? processedData.voc : 'N/A');
     setElementText('valueCO',       !isNaN(processedData.co) ? `${processedData.co.toFixed(1)} ppm` : 'N/A');
     setElementText('valueCO2',      !isNaN(processedData.co2) ? `${processedData.co2.toFixed(0)} ppm` : 'N/A');
     setElementText('valuePM25',     !isNaN(processedData.pm25) ? `${processedData.pm25.toFixed(1)} µg/m³` : 'N/A');
@@ -338,7 +311,6 @@ const fetchData = async () => {
     setElementText('valuePressure', !isNaN(processedData.pressure) ? `${processedData.pressure.toFixed(0)} hPa` : 'N/A');
     setElementText('valueHumidity', !isNaN(processedData.humidity) ? `${processedData.humidity.toFixed(1)} %` : 'N/A');
 
-    // Update descriptions
     setElementText('descAQI',      getAQIDescription(processedData.aqi));
     setElementText('descVOC',      getVOCDescription(processedData.voc));
     setElementText('descCO',       getCODescription(processedData.co));
@@ -349,7 +321,6 @@ const fetchData = async () => {
     setElementText('descPressure', getPressureDescription(processedData.pressure));
     setElementText('descHumidity', getHumidityDescription(processedData.humidity));
 
-    // Update line chart
     const dataTime = processedData.timestamp ? new Date(processedData.timestamp).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
     if (aqiChart.data.labels.length === 0 || aqiChart.data.labels[aqiChart.data.labels.length - 1] !== dataTime) {
@@ -371,14 +342,12 @@ const fetchData = async () => {
         }
         aqiChart.update('none');
         saveChartDataToLocalStorage(aqiChart);
-    } else {
-        // console.log("Skipping chart update: timestamp identical to the last point.");
     }
 
   } catch (err) {
     console.error('Failed to fetch or process data:', err);
     const descAqiElement = document.getElementById('descAQI');
-    if (descAqiElement) { // Update UI to show error
+    if (descAqiElement) {
         descAqiElement.innerText = 'Error processing data.';
     }
   }
@@ -389,7 +358,7 @@ function updateDateTime() {
   const now = new Date();
   const dateTimeElement = document.getElementById("dateTime");
   if (dateTimeElement) {
-    dateTimeElement.textContent = now.toLocaleString("en-US", { // Using en-US for consistency, adjust if needed
+    dateTimeElement.textContent = now.toLocaleString("en-US", {
         weekday: "long", year: "numeric", month: "long", day: "numeric",
         hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
     });
@@ -397,17 +366,16 @@ function updateDateTime() {
 }
 
 // ----------- Initial Setup -----------
-// Ensure the script runs after the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('aqiLineChart')) { // Check if chart element exists
+  if (document.getElementById('aqiLineChart')) {
     loadChartDataFromLocalStorage(aqiChart);
   } else {
     console.error("Chart element 'aqiLineChart' not found. Chart cannot be initialized or loaded.");
   }
   
-  updateDateTime(); // Initial call
-  setInterval(updateDateTime, 1000); // Update time every second
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
   
-  fetchData(); // Initial data fetch
-  setInterval(fetchData, 5000); // Fetch new data every 5 seconds
+  fetchData(); 
+  setInterval(fetchData, 5000);
 });
