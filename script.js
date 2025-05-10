@@ -152,7 +152,7 @@ const aqiChart = new Chart(document.getElementById('aqiLineChart'), {
 // ----------- Fetch & render data every 5s -----------
 const fetchData = async () => {
   try {
-    const apiUrl = 'https://<api-id>.execute-api.<region>.amazonaws.com/prod/latest-sensor';  
+    const apiUrl = 'https://rhbwfu9pxk.execute-api.ap-southeast-1.amazonaws.com/prod';  
     const res = await fetch(apiUrl);
     if (!res.ok) {
       console.error(`API fetch failed: ${res.status} ${res.statusText}`);
