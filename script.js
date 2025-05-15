@@ -45,14 +45,14 @@ const createGauge = (id, max, color) => {
 
 // ----------- Gauges with correct maxes -----------
 const GAUGE_MAX_VALUES = {
-  aqi: 500, voc: 3, co: 15.4, co2: 2000, pm25: 150.4,
-  pm10: 154, temp: 50, pressure: 1100, humidity: 100
+  aqi: 500, voc: 3, co: 15.4, co2: 2000, pm25: 150.4, // Note: Max for PM2.5 gauge is for direct display, AQI calculation uses different breakpoints
+  pm10: 154, temp: 50, pressure: 1100, humidity: 100 // Note: Max for PM10 gauge, AQI uses different breakpoints
 };
 
 const gauges = {
   aqi:      createGauge('gaugeAQI',      GAUGE_MAX_VALUES.aqi,      '#f44336'),
   voc:      createGauge('gaugeVOC',      GAUGE_MAX_VALUES.voc,      '#ff9800'),
-  co:       createGauge('gaugeCO',       GAUGE_MAX_VALUES.co,       '#ffeb3b'),
+  co:       createGauge('gaugeCO',       GAUGE_MAX_VALUES.co,       '#ffeb3b'), // Max for CO gauge is based on its "Unhealthy" threshold for direct display
   co2:      createGauge('gaugeCO2',      GAUGE_MAX_VALUES.co2,      '#4caf50'),
   pm25:     createGauge('gaugePM25',     GAUGE_MAX_VALUES.pm25,     '#2196f3'),
   pm10:     createGauge('gaugePM10',     GAUGE_MAX_VALUES.pm10,     '#9c27b0'),
@@ -61,20 +61,67 @@ const gauges = {
   humidity: createGauge('gaugeHumidity', GAUGE_MAX_VALUES.humidity, '#673ab7')
 };
 
-// ----------- AQI calculation & descriptions (Your existing functions) -----------
-function calculateAQI(pm25_value) {
-  const C = parseFloat(pm25_value);
-  if (isNaN(C) || C < 0) return 0;
+// ----------- AQI calculation & descriptions -----------
+
+// Helper function to calculate individual AQI for a pollutant
+function calculateSubAQI(Cp, pollutantType) {
   let I_low, I_high, C_low, C_high;
-  if (C >= 0 && C <= 12.0) { I_low = 0; I_high = 50; C_low = 0.0; C_high = 12.0; }
-  else if (C > 12.0 && C <= 35.4) { I_low = 51; I_high = 100; C_low = 12.1; C_high = 35.4; }
-  else if (C > 35.4 && C <= 55.4) { I_low = 101; I_high = 150; C_low = 35.5; C_high = 55.4; }
-  else if (C > 55.4 && C <= 150.4) { I_low = 151; I_high = 200; C_low = 55.5; C_high = 150.4; }
-  else if (C > 150.4 && C <= 250.4) { I_low = 201; I_high = 300; C_low = 150.5; C_high = 250.4; }
-  else if (C > 250.4 && C <= 350.4) { I_low = 301; I_high = 400; C_low = 250.5; C_high = 350.4; }
-  else if (C > 350.4 && C <= 500.4) { I_low = 401; I_high = 500; C_low = 350.5; C_high = 500.4; }
-  else { return 500; }
+  const C = parseFloat(Cp);
+  if (isNaN(C) || C < 0) return 0; // Return 0 if concentration is invalid
+
+  switch (pollutantType) {
+    case 'pm25':
+      if (C >= 0 && C <= 12.0) { I_low = 0; I_high = 50; C_low = 0.0; C_high = 12.0; }
+      else if (C > 12.0 && C <= 35.4) { I_low = 51; I_high = 100; C_low = 12.1; C_high = 35.4; }
+      else if (C > 35.4 && C <= 55.4) { I_low = 101; I_high = 150; C_low = 35.5; C_high = 55.4; }
+      else if (C > 55.4 && C <= 150.4) { I_low = 151; I_high = 200; C_low = 55.5; C_high = 150.4; }
+      else if (C > 150.4 && C <= 250.4) { I_low = 201; I_high = 300; C_low = 150.5; C_high = 250.4; }
+      else if (C > 250.4 && C <= 350.4) { I_low = 301; I_high = 400; C_low = 250.5; C_high = 350.4; }
+      else if (C > 350.4 && C <= 500.4) { I_low = 401; I_high = 500; C_low = 350.5; C_high = 500.4; }
+      else { return 500; } // Cap at 500 if concentration exceeds highest breakpoint
+      break;
+    case 'pm10':
+      if (C >= 0 && C <= 54) { I_low = 0; I_high = 50; C_low = 0; C_high = 54; }
+      else if (C > 54 && C <= 154) { I_low = 51; I_high = 100; C_low = 55; C_high = 154; }
+      else if (C > 154 && C <= 254) { I_low = 101; I_high = 150; C_low = 155; C_high = 254; }
+      else if (C > 254 && C <= 354) { I_low = 151; I_high = 200; C_low = 255; C_high = 354; }
+      else if (C > 354 && C <= 424) { I_low = 201; I_high = 300; C_low = 355; C_high = 424; }
+      else if (C > 424 && C <= 504) { I_low = 301; I_high = 400; C_low = 425; C_high = 504; }
+      else if (C > 504 && C <= 604) { I_low = 401; I_high = 500; C_low = 505; C_high = 604; }
+      else { return 500; }
+      break;
+    case 'co': // Assuming CO is in ppm
+      if (C >= 0.0 && C <= 4.4) { I_low = 0; I_high = 50; C_low = 0.0; C_high = 4.4; }
+      else if (C > 4.4 && C <= 9.4) { I_low = 51; I_high = 100; C_low = 4.5; C_high = 9.4; }
+      else if (C > 9.4 && C <= 12.4) { I_low = 101; I_high = 150; C_low = 9.5; C_high = 12.4; }
+      else if (C > 12.4 && C <= 15.4) { I_low = 151; I_high = 200; C_low = 12.5; C_high = 15.4; }
+      else if (C > 15.4 && C <= 30.4) { I_low = 201; I_high = 300; C_low = 15.5; C_high = 30.4; }
+      else if (C > 30.4 && C <= 40.4) { I_low = 301; I_high = 400; C_low = 30.5; C_high = 40.4; }
+      else if (C > 40.4 && C <= 50.4) { I_low = 401; I_high = 500; C_low = 40.5; C_high = 50.4; }
+      else { return 500; }
+      break;
+    default:
+      return 0; // Unknown pollutant
+  }
+  // Linear interpolation formula
   return Math.round(((I_high - I_low) / (C_high - C_low)) * (C - C_low) + I_low);
+}
+
+/**
+ * Calculates the overall AQI based on PM2.5, PM10, and CO values.
+ * The overall AQI is the maximum of the individual AQIs calculated for each pollutant.
+ * @param {number|string} pm25_value - The concentration of PM2.5 (µg/m³).
+ * @param {number|string} pm10_value - The concentration of PM10 (µg/m³).
+ * @param {number|string} co_value - The concentration of CO (ppm).
+ * @returns {number} The calculated overall AQI.
+ */
+function calculateAQI(pm25_value, pm10_value, co_value) {
+  const aqi_pm25 = calculateSubAQI(pm25_value, 'pm25');
+  const aqi_pm10 = calculateSubAQI(pm10_value, 'pm10');
+  const aqi_co   = calculateSubAQI(co_value, 'co');
+
+  // The final AQI is the highest of the individual pollutant AQIs
+  return Math.max(aqi_pm25, aqi_pm10, aqi_co);
 }
 
 function getAQIDescription(aqi) {
@@ -98,9 +145,11 @@ function getVOCDescription(vocClass) {
 function getCODescription(co) {
   const val = parseFloat(co);
   if (isNaN(val)) return "N/A";
-  if (val <= 4.4)   return "Good"; if (val <= 9.4)   return "Moderate";
-  if (val <= 12.4)  return "Unhealthy for Sensitive Groups";
-  if (val <= 15.4)  return "Unhealthy"; return "Very Unhealthy";
+  if (val <= 4.4)   return "Good"; if (val <= 9.4)   return "Moderate"; // Matches AQI breakpoints
+  if (val <= 12.4)  return "Unhealthy for Sensitive Groups"; // Matches AQI breakpoints
+  if (val <= 15.4)  return "Unhealthy"; // Matches AQI breakpoints
+  if (val <= 30.4)  return "Very Unhealthy"; // Matches AQI breakpoints
+  return "Hazardous"; // For values > 30.4 ppm
 }
 function getCO2Description(co2) {
   const val = parseFloat(co2);
@@ -110,13 +159,28 @@ function getCO2Description(co2) {
   if (val <= 2000)  return "Moderate (Complaints of drowsiness)";
   return "High (Potential health effects)";
 }
-function getPMDescription(pm_value) {
+// Generic PM description - can be used for both PM2.5 and PM10 raw values if needed
+// However, AQI description is more specific. This is more for interpreting direct concentration.
+function getPMDescription(pm_value, pollutantType = 'pm25') { // Added type for potential differentiation
     const val = parseFloat(pm_value);
     if (isNaN(val)) return "N/A";
-    if (val <= 12.0) return "Good"; if (val <= 35.4) return "Moderate";
-    if (val <= 55.4) return "Unhealthy for Sensitive Groups";
-    if (val <= 150.4) return "Unhealthy"; if (val <= 250.4) return "Very Unhealthy";
-    return "Hazardous";
+
+    if (pollutantType === 'pm25') {
+        if (val <= 12.0) return "Good";
+        if (val <= 35.4) return "Moderate";
+        if (val <= 55.4) return "Unhealthy for Sensitive Groups";
+        if (val <= 150.4) return "Unhealthy";
+        if (val <= 250.4) return "Very Unhealthy";
+        return "Hazardous";
+    } else if (pollutantType === 'pm10') {
+        if (val <= 54) return "Good";
+        if (val <= 154) return "Moderate";
+        if (val <= 254) return "Unhealthy for Sensitive Groups";
+        if (val <= 354) return "Unhealthy";
+        if (val <= 424) return "Very Unhealthy";
+        return "Hazardous";
+    }
+    return "N/A"; // Default if type is unknown
 }
 function getTempDescription(t) {
   const val = parseFloat(t);
@@ -134,7 +198,7 @@ function getPressureDescription(p) {
 function getHumidityDescription(h) {
   const val = parseFloat(h);
   if (isNaN(val)) return "N/A";
-  if (val < 30)    return "Dry"; if (val <= 60)   return "Comfortable";
+  if (val < 30)   return "Dry"; if (val <= 60)   return "Comfortable";
   return "Humid";
 }
 
@@ -166,8 +230,8 @@ const initializeChart = () => {
           yVOC: { type: 'linear', display: true, position: 'right', beginAtZero: true, max: GAUGE_MAX_VALUES.voc + 1, ticks: { stepSize: 1 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'VOC Class' }},
           yCO2: { type: 'linear', display: true, position: 'right', beginAtZero: true, max: GAUGE_MAX_VALUES.co2 + 500, grid: { drawOnChartArea: false }, title: { display: true, text: 'CO₂ (ppm)' }},
           yPressure: { type: 'linear', display: true, position: 'right', min: 900, max: GAUGE_MAX_VALUES.pressure, grid: { drawOnChartArea: false }, title: { display: true, text: 'Pressure (hPa)' }},
-          yOtherSmall: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 50, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Small Scale)' }},
-          yOtherMedium: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 200, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Medium Scale)' }},
+          yOtherSmall: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 50, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Small Scale)' }}, // CO, Temp
+          yOtherMedium: { type: 'linear', display: true, position: 'left', beginAtZero: true, max: 200, grid: { drawOnChartArea: false }, title: { display: true, text: 'Value (Medium Scale)' }}, // PM2.5, PM10, Humidity
           x: { title: { display: true, text: 'Time' }}
         },
         animation: { duration: 0 }
@@ -267,7 +331,8 @@ const fetchData = async () => {
       humidity: data.Humidity_AHT20 !== null && data.Humidity_AHT20 !== undefined ? parseFloat(data.Humidity_AHT20) : NaN,
       apiTimestamp: data.timestamp 
     };
-    processedData.aqi = calculateAQI(processedData.pm25);
+    // MODIFIED: Calculate AQI using PM2.5, PM10, and CO
+    processedData.aqi = calculateAQI(processedData.pm25, processedData.pm10, processedData.co);
 
     console.log("Data processed for UI update:", JSON.stringify(processedData));
     
@@ -279,7 +344,7 @@ const fetchData = async () => {
             if (!isNaN(val)) {
                 currentGauge.data.datasets[0].data = [Math.min(val, max), Math.max(0, max - Math.min(val,max))];
             } else {
-                currentGauge.data.datasets[0].data = [0, max];
+                currentGauge.data.datasets[0].data = [0, max]; // Show empty if NaN
             }
             currentGauge.update('none');
         }
@@ -308,13 +373,13 @@ const fetchData = async () => {
     setElementText('valuePressure', formatValue(processedData.pressure, ' hPa', 0));
     setElementText('valueHumidity', formatValue(processedData.humidity, ' %'));
 
-    setElementText('descAQI',      getAQIDescription(processedData.aqi));
-    setElementText('descVOC',      getVOCDescription(processedData.voc));
-    setElementText('descCO',       getCODescription(processedData.co));
-    setElementText('descCO2',      getCO2Description(processedData.co2));
-    setElementText('descPM25',     getPMDescription(processedData.pm25));
-    setElementText('descPM10',     getPMDescription(processedData.pm10));
-    setElementText('descTemp',     getTempDescription(processedData.temp));
+    setElementText('descAQI',     getAQIDescription(processedData.aqi));
+    setElementText('descVOC',     getVOCDescription(processedData.voc));
+    setElementText('descCO',      getCODescription(processedData.co));
+    setElementText('descCO2',     getCO2Description(processedData.co2));
+    setElementText('descPM25',    getPMDescription(processedData.pm25, 'pm25')); // Specify type for PM2.5
+    setElementText('descPM10',    getPMDescription(processedData.pm10, 'pm10'));   // Specify type for PM10
+    setElementText('descTemp',    getTempDescription(processedData.temp));
     setElementText('descPressure', getPressureDescription(processedData.pressure));
     setElementText('descHumidity', getHumidityDescription(processedData.humidity));
 
@@ -323,8 +388,8 @@ const fetchData = async () => {
         return;
     }
     const dataTime = processedData.apiTimestamp ? 
-                     new Date(processedData.apiTimestamp).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 
-                     new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        new Date(processedData.apiTimestamp).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 
+                        new Date().toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
     console.log("Current dataTime for chart:", dataTime);
 
@@ -332,7 +397,7 @@ const fetchData = async () => {
         console.log("Updating chart: new dataTime or first data point.");
         aqiChart.data.labels.push(dataTime);
         const datasets = aqiChart.data.datasets;
-        const pushChartData = (value) => (isNaN(parseFloat(value)) ? null : parseFloat(value));
+        const pushChartData = (value) => (isNaN(parseFloat(value)) ? null : parseFloat(value)); // Handle NaN by pushing null
 
         datasets[0].data.push(pushChartData(processedData.aqi)); 
         datasets[1].data.push(pushChartData(processedData.voc));
